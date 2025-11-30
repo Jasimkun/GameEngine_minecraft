@@ -9,6 +9,8 @@ public class PlayerController2 : MonoBehaviour
     public float gravity = -9.81f;
     public float mouseSensitivity = 3f;
 
+    Animator anim;
+
     float xRotation = 0f;
     CharacterController controller;
     Transform cam;
@@ -24,6 +26,11 @@ public class PlayerController2 : MonoBehaviour
         {
             cam = GetComponentInChildren<Camera>()?.transform;
         }
+    }
+
+    private void Start()
+    {
+        anim = GetComponent<Animator>();
     }
 
     // Update is called once per frame
@@ -90,5 +97,25 @@ public class PlayerController2 : MonoBehaviour
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
         }
+    }
+
+    void ControllPlayer()
+    {
+        float moveHorizontal = Input.GetAxisRaw("Horizontal");
+        float moveVertical = Input.GetAxisRaw("Vertical");
+
+        Vector3 movement = new Vector3(moveHorizontal, 0.0f, moveVertical);
+
+        if (movement != Vector3.zero)
+        {
+            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(movement), 0.15f);
+            anim.SetInteger("Walk", 1);
+        }
+        else
+        {
+            anim.SetInteger("Walk", 0);
+        }
+
+        transform.Translate(movement * moveSpeed * Time.deltaTime, Space.World);
     }
 }
