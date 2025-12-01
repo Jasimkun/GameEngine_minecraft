@@ -4,10 +4,16 @@ using UnityEngine;
 
 public class PlayerController2 : MonoBehaviour
 {
+
+    [Header("Movement Settings")]
     public float moveSpeed = 5f;
     public float jumpPower = 5f;
     public float gravity = -9.81f;
     public float mouseSensitivity = 3f;
+
+    [Header("Light Settings")] 
+    public Light playerLight; 
+    public bool isLightOn = true;
 
     Animator anim;
 
@@ -26,11 +32,21 @@ public class PlayerController2 : MonoBehaviour
         {
             cam = GetComponentInChildren<Camera>()?.transform;
         }
+
+        if (playerLight == null)
+        {
+            playerLight = GetComponentInChildren<Light>();
+        }
     }
 
     private void Start()
     {
         anim = GetComponent<Animator>();
+
+        if (playerLight != null)
+        {
+            playerLight.enabled = isLightOn;
+        }
     }
 
     // Update is called once per frame
@@ -39,6 +55,8 @@ public class PlayerController2 : MonoBehaviour
         HandleCursorLock();
         HandleMove();
         HandleLook();
+
+        HandleLight();
     }
 
     void HandleMove()
@@ -117,5 +135,19 @@ public class PlayerController2 : MonoBehaviour
         }
 
         transform.Translate(movement * moveSpeed * Time.deltaTime, Space.World);
+    }
+
+    void HandleLight()
+    {
+        // F 키를 누르면 토글
+        if (Input.GetKeyDown(KeyCode.F))
+        {
+            isLightOn = !isLightOn;
+
+            if (playerLight != null)
+            {
+                playerLight.enabled = isLightOn;
+            }
+        }
     }
 }
