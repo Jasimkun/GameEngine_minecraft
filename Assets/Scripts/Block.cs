@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum BlockType { Dirt, Grass, Water, Iron }
+public enum ItemType { Dirt, Grass, Water, Iron, Axe, Sword, Pickaxe }
 public class Block : MonoBehaviour
 {
     [Header("Block Visual Stats")]
@@ -11,7 +11,7 @@ public class Block : MonoBehaviour
     public int maxStack = 99;           //최대 겹침 개수
 
     [Header("Block Stat")]
-    public BlockType type = BlockType.Dirt;
+    public ItemType type = ItemType.Dirt;
     public int maxHP = 3;
     [HideInInspector] public int hp;
 

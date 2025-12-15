@@ -82,20 +82,20 @@ public class NoiseVoxelMap : MonoBehaviour
     }
 
 
-    public void PlaceTile(Vector3Int pos, BlockType type)
+    public void PlaceTile(Vector3Int pos, ItemType type)
     {
         switch (type)
         {
-            case BlockType.Dirt:
+            case ItemType.Dirt:
                 PlaceDirt(pos.x, pos.y, pos.z);
                 break;
-            case BlockType.Grass:
+            case ItemType.Grass:
                 PlaceGrass(pos.x, pos.y, pos.z);
                 break;
-            case BlockType.Water:
+            case ItemType.Water:
                 PlaceWater(pos.x, pos.y, pos.z);
                 break;
-            case BlockType.Iron:
+            case ItemType.Iron:
                 PlaceIron(pos.x, pos.y, pos.z);
                 break;
         }
