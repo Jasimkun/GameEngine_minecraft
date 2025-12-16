@@ -452,6 +452,8 @@ MonoBehaviour:
   axeSprite: {fileID: 21300000, guid: 633a8b802ffcfd046bd4bb50917ca7b8, type: 3}
   swordSprite: {fileID: 21300000, guid: 5b8681a14523b30418f91b754c08dee7, type: 3}
   pickaxeSprite: {fileID: 21300000, guid: 73d4fe9dd3e30c7409711e83056d67ec, type: 3}
+  woodSprite: {fileID: 21300000, guid: e7f7916e42fd2bf40a8c838db5e82465, type: 3}
+  stoneSprite: {fileID: 21300000, guid: aa82556369900bf449a35bdefd80dec0, type: 3}
   Slot:
   - {fileID: 2025853299}
   - {fileID: 1299955790}
@@ -1869,10 +1871,18 @@ MonoBehaviour:
     type: 3}
   orePrefab: {fileID: 5792481177299588748, guid: 6cb86c9d8e8b1cf4eb55579c858cbe69,
     type: 3}
+  woodPrefab: {fileID: 0}
+  stonePrefab: {fileID: 0}
   oreMaxHeight: 7
   oreNoiseScale: 20
   oreThreshold: 0.65
   oreChance: 0.2
+  minTrees: 5
+  maxTrees: 10
+  woodDropType: 7
+  woodDropAmount: 3
+  minDepthForStone: 4
+  maxDepthForStone: 5
 --- !u!114 &941363981
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3477,6 +3487,8 @@ MonoBehaviour:
   axeSprite: {fileID: 0}
   swordSprite: {fileID: 0}
   pickaxeSprite: {fileID: 0}
+  woodSprite: {fileID: 0}
+  stoneSprite: {fileID: 0}
   Slot:
   - {fileID: 2025853299}
   - {fileID: 1299955790}

@@ -532,6 +532,7 @@ MonoBehaviour:
   swordSprite: {fileID: 21300000, guid: 5b8681a14523b30418f91b754c08dee7, type: 3}
   pickaxeSprite: {fileID: 21300000, guid: 73d4fe9dd3e30c7409711e83056d67ec, type: 3}
   woodSprite: {fileID: 21300000, guid: e7f7916e42fd2bf40a8c838db5e82465, type: 3}
+  stoneSprite: {fileID: 21300000, guid: aa82556369900bf449a35bdefd80dec0, type: 3}
   Slot:
   - {fileID: 2025853299}
   - {fileID: 1299955790}
@@ -2336,8 +2337,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   offsetX: 0
   offsetZ: 0
-  width: 60
-  depth: 60
+  width: 100
+  depth: 100
   maxHeight: 16
   waterLevel: 5
   noiseScale: 20
@@ -2351,6 +2352,8 @@ MonoBehaviour:
     type: 3}
   woodPrefab: {fileID: 5792481177299588748, guid: 6161aac8569e7234e8e1a98b84fcda65,
     type: 3}
+  stonePrefab: {fileID: 5792481177299588748, guid: 169ffeb6a1d27ca4c8e4e7dc4a0185fe,
+    type: 3}
   oreMaxHeight: 7
   oreNoiseScale: 20
   oreThreshold: 0.65
@@ -2359,6 +2362,8 @@ MonoBehaviour:
   maxTrees: 15
   woodDropType: 7
   woodDropAmount: 4
+  minDepthForStone: 4
+  maxDepthForStone: 5
 --- !u!114 &941363981
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3342,6 +3347,7 @@ MonoBehaviour:
   swordSprite: {fileID: 0}
   pickaxeSprite: {fileID: 0}
   woodSprite: {fileID: 0}
+  stoneSprite: {fileID: 0}
   Slot:
   - {fileID: 2025853299}
   - {fileID: 1299955790}
@@ -3382,7 +3388,7 @@ Transform:
   m_GameObject: {fileID: 1868008657}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.745, z: -0.739}
+  m_LocalPosition: {x: 0, y: 1.499, z: -0.103}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

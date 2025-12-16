@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 // 💡 [핵심] ItemType 열거형 정의 (Wood 포함)
-public enum ItemType { Dirt, Grass, Water, Iron, Axe, Sword, Pickaxe, Wood }
+public enum ItemType { Dirt, Grass, Water, Iron, Axe, Sword, Pickaxe, Wood, Stone }
 
 public class Block : MonoBehaviour
 {

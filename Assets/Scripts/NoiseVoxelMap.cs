@@ -1,6 +1,9 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
 
+// ItemType 열거형이 외부 스크립트에서 이미 정의되어 있으며, 
+// ItemType.Stone이 추가되었다고 가정합니다.
+
 public class NoiseVoxelMap : MonoBehaviour
 {
     public float offsetX;
@@ -19,6 +22,7 @@ public class NoiseVoxelMap : MonoBehaviour
     public GameObject waterPrefab;
     public GameObject orePrefab;
     public GameObject woodPrefab;
+    public GameObject stonePrefab; // 💡 [수정] 돌 블록 프리팹 추가 (Rock -> Stone)
 
     // 광물 생성 설정
     public int oreMaxHeight = 7;
@@ -32,6 +36,11 @@ public class NoiseVoxelMap : MonoBehaviour
     public int maxTrees = 10;
     public ItemType woodDropType = ItemType.Wood;
     public int woodDropAmount = 3;
+
+    // 돌 생성 깊이 설정
+    [Header("Stone Generation")]
+    public int minDepthForStone = 4; // 지표면(h)으로부터 4블록 깊이부터
+    public int maxDepthForStone = 5; // 지표면(h)으로부터 5블록 깊이까지
 
     private Dictionary<Vector2Int, int> topBlockHeight = new Dictionary<Vector2Int, int>();
 
@@ -53,10 +62,21 @@ public class NoiseVoxelMap : MonoBehaviour
 
                 for (int y = 0; y <= h; y++)
                 {
-                    if (y == h)
+                    int depthFromTop = h - y; // 지표면(h)으로부터 현재 블록(y)까지의 깊이
+
+                    // 💡 돌 생성 조건: 지표면에서 4~5 블록 아래에 있다면 돌 배치
+                    if (depthFromTop >= minDepthForStone && depthFromTop <= maxDepthForStone)
+                    {
+                        PlaceStone(x, y, z);
+                    }
+                    else if (y == h)
+                    {
                         PlaceGrass(x, y, z);
+                    }
                     else
+                    {
                         PlaceDirt(x, y, z);
+                    }
                 }
 
                 topBlockHeight[new Vector2Int(x, z)] = h;
@@ -80,7 +100,6 @@ public class NoiseVoxelMap : MonoBehaviour
         List<Vector2Int> availablePositions = new List<Vector2Int>(topBlockHeight.Keys);
         List<Vector2Int> safePositions = new List<Vector2Int>();
 
-        // 물 위에 있는 좌표는 제외 (잔디 블록 높이가 물 레벨보다 높거나 같아야 함)
         foreach (var posXZ in availablePositions)
         {
             int highestBlockY = topBlockHeight[posXZ];
@@ -129,6 +148,18 @@ public class NoiseVoxelMap : MonoBehaviour
         go.name = $"Dirt_{x}_{y}_{z}";
     }
 
+    // 💡 [추가] 돌 배치 함수
+    private void PlaceStone(int x, int y, int z)
+    {
+        if (stonePrefab == null)
+        {
+            PlaceDirt(x, y, z); // 프리팹이 없으면 흙으로 대체
+            return;
+        }
+        var go = Instantiate(stonePrefab, new Vector3(x, y, z), Quaternion.identity, transform);
+        go.name = $"Stone_{x}_{y}_{z}";
+    }
+
     private void PlaceGrass(int x, int y, int z)
     {
         var go = Instantiate(grassPrefab, new Vector3(x, y, z), Quaternion.identity, transform);
@@ -171,6 +202,9 @@ public class NoiseVoxelMap : MonoBehaviour
                 break;
             case ItemType.Wood:
                 PlaceWood(pos.x, pos.y, pos.z);
+                break;
+            case ItemType.Stone: // 💡 [추가] ItemType.Stone 설치 케이스
+                PlaceStone(pos.x, pos.y, pos.z);
                 break;
         }
     }
