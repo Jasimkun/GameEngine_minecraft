@@ -2284,9 +2284,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 459c7cb37b9d169418d3fa1790823531, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  enemyPrefab: {fileID: 0}
-  spawnInterval: 3
-  voxelMap: {fileID: 0}
+  enemyPrefab: {fileID: 5099992602596450727, guid: 759e40a61b124c44f9b9577d53542b41,
+    type: 3}
+  spawnInterval: 10
+  voxelMap: {fileID: 941363980}
 --- !u!4 &929424800
 Transform:
   m_ObjectHideFlags: 0

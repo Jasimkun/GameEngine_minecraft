@@ -9,15 +9,15 @@ public class SceneSwitcher : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Alpha1))
+        if (Input.GetKeyDown(KeyCode.M))
         {
             SceneManager.LoadScene(scene1Name);
         }
-        else if (Input.GetKeyDown(KeyCode.Alpha2))
+        else if (Input.GetKeyDown(KeyCode.N))
         {
             SceneManager.LoadScene(scene2Name);
         }
-        else if (Input.GetKeyDown(KeyCode.Alpha3))
+        else if (Input.GetKeyDown(KeyCode.B))
         {
             SceneManager.LoadScene(scene3Name);
         }

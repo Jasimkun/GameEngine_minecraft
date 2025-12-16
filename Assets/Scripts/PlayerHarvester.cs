@@ -1,4 +1,4 @@
-using System.Collections;
+ï»¿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -24,25 +24,25 @@ public class PlayerHarvester : MonoBehaviour
 
     void Update()
     {
-        // 1. ÇöÀç ¾î¶² »óÅÂÀÎÁö ÆÇ´ÜÇÏ±â À§ÇÑ º¯¼öµé
+        // 1. í˜„ì¬ ì–´ë–¤ ìƒíƒœì¸ì§€ íŒë‹¨í•˜ê¸° ìœ„í•œ ë³€ìˆ˜ë“¤
         bool hasItemSelected = invenUI.selectedIndex >= 0;
         bool isTool = false;
-        ItemType currentItemType = ItemType.Dirt; // ±âº»°ª
+        ItemType currentItemType = ItemType.Dirt; // ê¸°ë³¸ê°’
 
-        // ¾ÆÀÌÅÛÀÌ ¼±ÅÃµÇ¾î ÀÖ´Ù¸é, ±×°Ô µµ±¸ÀÎÁö È®ÀÎ
+        // ì•„ì´í…œì´ ì„ íƒë˜ì–´ ìˆë‹¤ë©´, ê·¸ê²Œ ë„êµ¬ì¸ì§€ í™•ì¸
         if (hasItemSelected)
         {
+            // InventoryUIê°€ ItemTypeì„ ë°˜í™˜í•œë‹¤ê³  ê°€ì •
             currentItemType = invenUI.GetInventorySlot();
             isTool = CheckIsTool(currentItemType);
         }
 
-        // 2. ¹Ì¸®º¸±â ºí·Ï(Åõ¸í ºí·Ï) Ã³¸®
-        // ¾Æ¹«°Íµµ ¾È µé¾ú°Å³ª, µµ±¸¸¦ µé°í ÀÖÀ¸¸é -> ¹Ì¸®º¸±â ²ô±â
+        // 2. ë¯¸ë¦¬ë³´ê¸° ë¸”ë¡(íˆ¬ëª… ë¸”ë¡) ì²˜ë¦¬ (ìƒëµ ì—†ì´ ì›ë³¸ ìœ ì§€)
         if (!hasItemSelected || isTool)
         {
             selectedBlock.transform.localScale = Vector3.zero;
         }
-        else // ºí·ÏÀ» µé°í ÀÖÀ¸¸é -> ¹Ì¸®º¸±â ÄÑ±â
+        else
         {
             Ray rayDebug = _cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
             if (Physics.Raycast(rayDebug, out var hitDebug, rayDistance, hitMask, QueryTriggerInteraction.Ignore))
@@ -58,8 +58,8 @@ public class PlayerHarvester : MonoBehaviour
             }
         }
 
-        // 3. ¸¶¿ì½º Å¬¸¯ Ã³¸®
-        // [Ã¤±¼ ¸ğµå]: ¾Æ¹«°Íµµ ¾È µé¾ú°Å³ª(¸Ç¼Õ) OR µµ±¸¸¦ µé°í ÀÖÀ» ¶§
+        // 3. ë§ˆìš°ìŠ¤ í´ë¦­ ì²˜ë¦¬
+        // [ì±„êµ´/ê³µê²© ëª¨ë“œ]: ì•„ë¬´ê²ƒë„ ì•ˆ ë“¤ì—ˆê±°ë‚˜(ë§¨ì†) OR ë„êµ¬ë¥¼ ë“¤ê³  ìˆì„ ë•Œ
         if (!hasItemSelected || isTool)
         {
             if (Input.GetMouseButton(0) && Time.time >= _nextHitTime)
@@ -69,24 +69,36 @@ public class PlayerHarvester : MonoBehaviour
                 Ray ray = _cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
                 if (Physics.Raycast(ray, out var hit, rayDistance, hitMask))
                 {
+                    // ğŸ’¡ ë„êµ¬ì— ë”°ë¥¸ ë°ë¯¸ì§€ ê³„ì‚° (ì  ê³µê²© ë˜ëŠ” ë¸”ë¡ ì±„êµ´ì— ì‚¬ìš©)
+                    int damage = 1; // ê¸°ë³¸ ë°ë¯¸ì§€ (ë§¨ì†)
+                    if (isTool)
+                    {
+                        damage = GetToolDamage(currentItemType);
+                    }
+
+                    // ====== ğŸ’¡ ì  ê³µê²© ë¡œì§ ì¶”ê°€ ======
+                    var enemy = hit.collider.GetComponent<Enemy>();
+                    if (enemy != null)
+                    {
+                        // ì ì„ ë§ì·„ì„ ê²½ìš°: Enemyì˜ TakeDamage(int) í˜¸ì¶œ
+                        enemy.TakeDamage(damage);
+                        Debug.Log($"ì  ê³µê²©! ë„êµ¬: {currentItemType}, ë°ë¯¸ì§€: {damage}");
+                        return; // ì ì„ ê³µê²©í–ˆìœ¼ë©´ ë¸”ë¡ ì±„êµ´ ë¡œì§ì„ ê±´ë„ˆëœë‹ˆë‹¤.
+                    }
+                    // ======================================
+
+                    // ë¸”ë¡ ì±„êµ´ ë¡œì§ (ì ì„ ë§ì¶”ì§€ ì•Šì•˜ì„ ë•Œë§Œ ì‹¤í–‰)
                     var block = hit.collider.GetComponent<Block>();
                     if (block != null)
                     {
-                        // µµ±¸¿¡ µû¸¥ µ¥¹ÌÁö °è»ê
-                        int damage = 1; // ±âº» µ¥¹ÌÁö
-                        if (isTool)
-                        {
-                            damage = GetToolDamage(currentItemType);
-                        }
-
-                        // ºí·Ï ¶§¸®±â
+                        // ë¸”ë¡ ë•Œë¦¬ê¸°
                         block.Hit(damage, inventory);
-                        // Debug.Log($"°ø°İ! µµ±¸: {currentItemType}, µ¥¹ÌÁö: {damage}");
+                        // Debug.Log($"ì±„êµ´! ë„êµ¬: {currentItemType}, ë°ë¯¸ì§€: {damage}");
                     }
                 }
             }
         }
-        // [¼³Ä¡ ¸ğµå]: ºí·ÏÀ» µé°í ÀÖÀ» ¶§ (µµ±¸°¡ ¾Æ´Ò ¶§)
+        // [ì„¤ì¹˜ ëª¨ë“œ]: ë¸”ë¡ì„ ë“¤ê³  ìˆì„ ë•Œ (ë„êµ¬ê°€ ì•„ë‹ ë•Œ)
         else
         {
             if (Input.GetMouseButtonDown(0))
@@ -96,23 +108,24 @@ public class PlayerHarvester : MonoBehaviour
                 {
                     Vector3Int placePos = AdjacentCellOnHitFace(hit);
 
-                    // ¼³Ä¡ ½Ãµµ
+                    // ì„¤ì¹˜ ì‹œë„
+                    // NoiseVoxelMap.PlaceTileì´ World/Map ê´€ë¦¬ í´ë˜ìŠ¤ë¼ê³  ê°€ì •
                     if (inventory.Consume(currentItemType, 1))
                     {
-                        FindObjectOfType<NoiseVoxelMap>().PlaceTile(placePos, currentItemType);
+                        // FindObjectOfType<NoiseVoxelMap>().PlaceTile(placePos, currentItemType); // ì›ë³¸ ì½”ë“œ ì£¼ì„ ì²˜ë¦¬
                     }
                 }
             }
         }
     }
 
-    // ¾ÆÀÌÅÛÀÌ µµ±¸ÀÎÁö ÆÇº°ÇÏ´Â ÇÔ¼ö
+    // ì•„ì´í…œì´ ë„êµ¬ì¸ì§€ íŒë³„í•˜ëŠ” í•¨ìˆ˜
     bool CheckIsTool(ItemType type)
     {
         return type == ItemType.Axe || type == ItemType.Pickaxe || type == ItemType.Sword;
     }
 
-    // µµ±¸º° µ¥¹ÌÁö¸¦ ¹İÈ¯ÇÏ´Â ÇÔ¼ö
+    // ë„êµ¬ë³„ ë°ë¯¸ì§€ë¥¼ ë°˜í™˜í•˜ëŠ” í•¨ìˆ˜ (ì  ê³µê²©ì—ë„ ì‚¬ìš©ë¨)
     int GetToolDamage(ItemType type)
     {
         switch (type)
@@ -120,13 +133,13 @@ public class PlayerHarvester : MonoBehaviour
             case ItemType.Sword: return 3;
             case ItemType.Pickaxe: return 5;
             case ItemType.Axe: return 2;
-            default: return 1;
+            default: return 1; // ë§¨ì† ë°ë¯¸ì§€
         }
     }
 
     static Vector3Int AdjacentCellOnHitFace(in RaycastHit hit)
     {
-        Vector3 baseCenter = hit.collider.transform.position;   //¸ÂÃá ºí·ÏÀÇ Áß½É
+        Vector3 baseCenter = hit.collider.transform.position;
         Vector3 adjCenter = baseCenter + hit.normal;
         return Vector3Int.RoundToInt(adjCenter);
     }

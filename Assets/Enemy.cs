@@ -1,102 +1,136 @@
-using System.Collections;
+ï»¿using System.Collections;
 using System.Collections.Generic;
-using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
 
+// IDamageable ì¸í„°í˜ì´ìŠ¤ ì •ì˜ ë° ìƒì† ì œê±°
+
 public class Enemy : MonoBehaviour
 {
-    public enum EnemyState { Idle, Trace, Attack, RunAway }
-
+    // === ìƒíƒœ ì—´ê±°í˜• ===
+    public enum EnemyState { Idle, Trace, RunAway, Suicide }
     public EnemyState state = EnemyState.Idle;
 
-    public float movespeed = 2f;      //ÀÌµ¿ ¼Óµµ  
+    // === ì´ë™ ë° ì¶”ì  ì„¤ì • ===
+    public float movespeed = 2f;
+    public float traceRange = 15f;
+    public float suicideRange = 3f;
 
-    public float traceRange = 15f;      //ÃßÀû ½ÃÀÛ °Å¸®
+    // === ìí­ ë° ê²½ê³  ì„¤ì • ===
+    public float suicideDelay = 3f;
+    public float explosionRadius = 3f;
+    public Color warningColor = Color.white;
+    public int baseExplosionDamage = 10;
 
-    public float attackRange = 6f;      //°ø°İ ½ÃÀÛ °Å¸®
+    // === ìí­ ì—°ì¶œ ë³€ìˆ˜ ===
+    public float blinkInterval = 0.2f;
+    public float maxSuicideScale = 2.0f;
+    private Vector3 originalScale;
+    private Coroutine suicideCoroutine;
+    private Coroutine blinkCoroutine;
 
-    public float attackCooldown = 1.5f;
+    // === ì§€ë©´ ë¶€ì°© ì„¤ì • ===
+    public float groundCheckDistance = 1.0f;
+    public float groundOffset = 0.1f;
 
-    public GameObject projectilePrefab;     //Åõ»çÃ¼ ÇÁ¸®ÆÕ
-
-    public Transform firePoint;             //¹ß»ç À§Ä¡
-
-    private float lastAttackTime;
-    public int maxHP = 5;
-
+    // === ì²´ë ¥ ì„¤ì • ===
+    public int baseMaxHP = 10;
     public int currentHP;
 
-    private Transform player;        //ÇÃ·¹ÀÌ¾î ÃßÀû¿ë
+    // === ìµœì¢… ìŠ¤íƒ¯ ë° ë„ì£¼ ê¸°ì¤€ ===
+    private int calculatedMaxHP;
+    private int calculatedDamage;
+    private const float RUN_AWAY_HP_PERCENT = 0.2f;
 
+    // === ì»´í¬ë„ŒíŠ¸ ===
+    private Transform player;
     public Slider hpSlider;
+    private Renderer enemyRenderer;
+    private Color originalColor;
+    private Rigidbody enemyRigidbody;
 
-    // Start is called before the first frame update
+
     void Start()
     {
         player = GameObject.FindGameObjectWithTag("Player")?.transform;
-        lastAttackTime = -attackCooldown;
-        currentHP = maxHP;
-        hpSlider.value = 1f;
+
+        calculatedMaxHP = baseMaxHP;
+        calculatedDamage = baseExplosionDamage;
+        currentHP = calculatedMaxHP;
+
+        if (hpSlider != null)
+        {
+            hpSlider.maxValue = calculatedMaxHP;
+            hpSlider.value = currentHP;
+        }
+
+        enemyRenderer = GetComponentInChildren<Renderer>();
+        enemyRigidbody = GetComponent<Rigidbody>();
+        if (enemyRigidbody == null)
+        {
+            enemyRigidbody = gameObject.AddComponent<Rigidbody>();
+        }
+        enemyRigidbody.isKinematic = true;
+        enemyRigidbody.useGravity = false;
+
+        if (enemyRenderer != null)
+        {
+            originalColor = enemyRenderer.material.color;
+        }
+
+        originalScale = transform.localScale;
     }
 
-    // Update is called once per frame
     void Update()
     {
         if (player == null) return;
+        if (enemyRigidbody != null && !enemyRigidbody.isKinematic) return;
+        if (state == EnemyState.Suicide) return;
 
         float dist = Vector3.Distance(player.position, transform.position);
 
-        //FSM »óÅÂ ÀüÈ¯
+        // FSM ìƒíƒœ ì „í™˜
         switch (state)
         {
             case EnemyState.Idle:
-                if (currentHP <= maxHP * 0.2f)
-                    state = EnemyState.RunAway;
-                else if (dist < traceRange)
-                    state = EnemyState.Trace;
+                if (currentHP <= calculatedMaxHP * RUN_AWAY_HP_PERCENT) state = EnemyState.RunAway;
+                else if (dist < traceRange) state = EnemyState.Trace;
                 break;
 
             case EnemyState.Trace:
-                if (currentHP <= maxHP * 0.2f)
-                    state = EnemyState.RunAway;
-                else if (dist < attackRange)
-                    state = EnemyState.Attack;
-                else
-                    TracePlayer();
+                if (currentHP <= calculatedMaxHP * RUN_AWAY_HP_PERCENT) state = EnemyState.RunAway;
+                // ìí­ ë²”ìœ„ ì•ˆì— ë“¤ì–´ì˜¤ë©´ ìí­ ì¹´ìš´íŠ¸ë‹¤ìš´ ì‹œì‘
+                else if (dist < suicideRange) { state = EnemyState.Suicide; if (suicideCoroutine == null) StartSuicideCountdown(); }
+                // ì¶”ì  ë° ì´ë™
+                else TracePlayer();
                 break;
 
-            case EnemyState.Attack:
-                if (currentHP <= maxHP * 0.2f)
-                    state = EnemyState.RunAway;
-                else if (dist > attackRange)
-                    state = EnemyState.Trace;
-
-                else
-                    AttackPlayer();
+            case EnemyState.Suicide:
                 break;
 
             case EnemyState.RunAway:
                 RunAwayFromPlayer();
-
-                float runawayDistance = 15f; // µµ¸Á ¿Ï·á °Å¸® ±âÁØ
-
-                if (Vector3.Distance(player.position, transform.position) > runawayDistance)
-                    state = EnemyState.Idle;
+                float runawayDistance = 15f;
+                if (Vector3.Distance(player.position, transform.position) > runawayDistance) state = EnemyState.Idle;
                 break;
-
         }
-
-        //ÇÃ·¹ÀÌ¾î±îÁöÀÇ ¹æÇâ ±¸ÇÏ±â
-        Vector3 direction = (player.position - transform.position).normalized;
-        transform.position += direction * movespeed * Time.deltaTime;
-        transform.LookAt(player.position);
     }
 
+    // === ë°ë¯¸ì§€ ì²˜ë¦¬ (public í•¨ìˆ˜ë¡œ ìœ ì§€) ===
+    // IDamageableì´ ì—†ìœ¼ë¯€ë¡œ, ë‹¤ë¥¸ ìŠ¤í¬ë¦½íŠ¸ëŠ” ì´ public í•¨ìˆ˜ë¥¼ ì§ì ‘ í˜¸ì¶œí•´ì•¼ í•©ë‹ˆë‹¤.
     public void TakeDamage(int damage)
     {
+        if (currentHP <= 0) return;
+
+        if (blinkCoroutine != null) StopCoroutine(blinkCoroutine);
+        blinkCoroutine = StartCoroutine(BlinkEffect());
+
         currentHP -= damage;
-        hpSlider.value = (float)currentHP / maxHP;
+
+        if (hpSlider != null)
+        {
+            hpSlider.value = currentHP;
+        }
 
         if (currentHP <= 0)
         {
@@ -104,55 +138,148 @@ public class Enemy : MonoBehaviour
         }
     }
 
-    //Àû Á¦°Å
+    private IEnumerator BlinkEffect()
+    {
+        if (enemyRenderer == null) yield break;
+        float blinkDuration = 0.1f;
+        Color original = enemyRenderer.material.color;
+
+        enemyRenderer.material.color = Color.red;
+        yield return new WaitForSeconds(blinkDuration);
+
+        enemyRenderer.material.color = (state == EnemyState.Suicide) ? warningColor : original;
+        blinkCoroutine = null;
+    }
+
     void Die()
     {
+        currentHP = 0;
+        StopAllCoroutines();
         Destroy(gameObject);
     }
+
+    // === ì´ë™ ë° ì§€ë©´ ë¶€ì°© ë¡œì§ ===
 
     void TracePlayer()
     {
         Vector3 dir = (player.position - transform.position).normalized;
-        transform.position += dir * movespeed * Time.deltaTime;
-        transform.LookAt(player.position);
-    }
+        Vector3 movement = new Vector3(dir.x, 0, dir.z) * movespeed * Time.deltaTime;
+        Vector3 nextPosition = transform.position + movement;
 
-    void AttackPlayer()
-    {
-        //ÀÏÁ¤ Äğ´Ù¿î¸¶´Ù ¹ß»ç
-        if (Time.deltaTime >= lastAttackTime + attackCooldown)
+        if (CheckGround(nextPosition))
         {
-            lastAttackTime = Time.time;
-            ShootProjectile();
+            transform.position = nextPosition;
+            SnapToGround();
         }
-    }
 
-    void ShootProjectile()
-    {
-        if (projectilePrefab != null && firePoint != null)
-        {
-            transform.LookAt(player.position);
-            GameObject proj = Instantiate(projectilePrefab, firePoint.position, firePoint.rotation);
-            EnemyProjectile ep = proj.GetComponent<EnemyProjectile>();
-            if (ep != null)
-            {
-                Vector3 dir = (player.position - firePoint.position).normalized;
-                ep.SetDirection(dir);
-            }    
-        }
+        Vector3 lookTarget = player.position; lookTarget.y = transform.position.y;
+        transform.LookAt(lookTarget);
     }
 
     void RunAwayFromPlayer()
     {
         Vector3 traceDirection = (player.position - transform.position).normalized;
-        Vector3 runDirection = -traceDirection; // ¹İ´ë ¹æÇâ
-
+        Vector3 runDirection = -traceDirection;
         float runSpeed = movespeed * 2f;
 
-        // ÀÌµ¿
-        transform.position += runDirection * runSpeed * Time.deltaTime;
+        Vector3 movement = new Vector3(runDirection.x, 0, runDirection.z) * runSpeed * Time.deltaTime;
+        Vector3 nextPosition = transform.position + movement;
 
-        // ÀûÀÇ ½Ã¼± ¹æÇâÀ» ÀÌµ¿ ¹æÇâÀ¸·Î ¼³Á¤
+        if (CheckGround(nextPosition))
+        {
+            transform.position = nextPosition;
+            SnapToGround();
+        }
         transform.rotation = Quaternion.LookRotation(runDirection);
     }
+
+    bool CheckGround(Vector3 position)
+    {
+        RaycastHit hit;
+        if (Physics.Raycast(position + Vector3.up * 0.1f, Vector3.down, out hit, groundCheckDistance))
+        {
+            return true;
+        }
+        return false;
+    }
+
+    void SnapToGround()
+    {
+        RaycastHit hit;
+        if (Physics.Raycast(transform.position + Vector3.up * 0.1f, Vector3.down, out hit, groundCheckDistance))
+        {
+            transform.position = new Vector3(transform.position.x, hit.point.y + groundOffset, transform.position.z);
+        }
+    }
+
+    // === ìí­ ë¡œì§ ===
+
+    private void StartSuicideCountdown()
+    {
+        suicideCoroutine = StartCoroutine(SuicideCountdown());
+    }
+
+    IEnumerator SuicideCountdown()
+    {
+        float elapsedTime = 0f;
+        float blinkTimer = 0f;
+        bool isBlinkOn = true;
+
+        if (enemyRenderer != null && blinkCoroutine == null) enemyRenderer.material.color = warningColor;
+
+        while (elapsedTime < suicideDelay)
+        {
+            elapsedTime += Time.deltaTime;
+            blinkTimer += Time.deltaTime;
+
+            // í¬ê¸° í™•ëŒ€ ì—°ì¶œ
+            float progress = elapsedTime / suicideDelay;
+            transform.localScale = Vector3.Lerp(originalScale, originalScale * maxSuicideScale, progress);
+
+            // ê¹œë¹¡ì„ ì—°ì¶œ
+            if (blinkTimer >= blinkInterval)
+            {
+                blinkTimer -= blinkInterval;
+                isBlinkOn = !isBlinkOn;
+                if (enemyRenderer != null && blinkCoroutine == null)
+                {
+                    enemyRenderer.material.color = isBlinkOn ? warningColor : originalColor;
+                }
+            }
+            yield return null;
+        }
+        suicideCoroutine = null;
+        Explode();
+    }
+
+    void Explode()
+    {
+        Collider[] hitColliders = Physics.OverlapSphere(transform.position, explosionRadius);
+        foreach (var hitCollider in hitColliders)
+        {
+            // í”Œë ˆì´ì–´ì—ê²Œ ë°ë¯¸ì§€ ì ìš©
+            if (hitCollider.CompareTag("Player"))
+            {
+                // ê¸°ì¡´: PlayerController playerScript = hitCollider.GetComponent<PlayerController>();
+                // ğŸ’¡ PlayerLightHealth ìŠ¤í¬ë¦½íŠ¸ë¥¼ ê°€ì ¸ì˜µë‹ˆë‹¤.
+                PlayerLightHealth playerHealthScript = hitCollider.GetComponent<PlayerLightHealth>();
+
+                if (playerHealthScript != null)
+                {
+                    // **ë°ë¯¸ì§€ë¥¼ float í˜•ì‹ìœ¼ë¡œ ì „ë‹¬í•©ë‹ˆë‹¤.**
+                    // baseExplosionDamage ë˜ëŠ” calculatedDamageëŠ” intì´ë¯€ë¡œ (float)ìœ¼ë¡œ í˜•ë³€í™˜í•˜ì—¬ ì „ë‹¬í•©ë‹ˆë‹¤.
+                    playerHealthScript.TakeDamage((float)calculatedDamage);
+                    Debug.Log($"ìí­ë³‘ì´ í”Œë ˆì´ì–´ì—ê²Œ {calculatedDamage} ë°ë¯¸ì§€ë¥¼ ì£¼ì—ˆìŠµë‹ˆë‹¤.");
+                }
+            }
+        }
+
+        Die();
+    }
+
+    // DeadZone ì²˜ë¦¬
+    //private void OnTriggerEnter(Collider other)
+    //{
+    //    if (other.CompareTag("DeadZone")) Die();
+    //}
 }
