@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-// IDamageable 인터페이스 정의 및 상속 제거
-
 public class Enemy : MonoBehaviour
 {
     // === 상태 열거형 ===
@@ -22,9 +20,13 @@ public class Enemy : MonoBehaviour
     public Color warningColor = Color.white;
     public int baseExplosionDamage = 10;
 
+    // 💡 [추가] 블록 파괴 범위 설정 (3x3x3 큐브를 위해 반지름 1 설정)
+    [Header("Block Destruction")]
+    public int blockExplosionRadius = 1; // 1이면 3x3x3 범위 (중앙 포함)
+
     // === 자폭 연출 변수 ===
     public float blinkInterval = 0.2f;
-    public float maxSuicideScale = 2.0f;
+    public float maxSuicideScale = 1.5f;
     private Vector3 originalScale;
     private Coroutine suicideCoroutine;
     private Coroutine blinkCoroutine;
@@ -89,7 +91,6 @@ public class Enemy : MonoBehaviour
 
         float dist = Vector3.Distance(player.position, transform.position);
 
-        // FSM 상태 전환
         switch (state)
         {
             case EnemyState.Idle:
@@ -99,9 +100,7 @@ public class Enemy : MonoBehaviour
 
             case EnemyState.Trace:
                 if (currentHP <= calculatedMaxHP * RUN_AWAY_HP_PERCENT) state = EnemyState.RunAway;
-                // 자폭 범위 안에 들어오면 자폭 카운트다운 시작
                 else if (dist < suicideRange) { state = EnemyState.Suicide; if (suicideCoroutine == null) StartSuicideCountdown(); }
-                // 추적 및 이동
                 else TracePlayer();
                 break;
 
@@ -116,8 +115,6 @@ public class Enemy : MonoBehaviour
         }
     }
 
-    // === 데미지 처리 (public 함수로 유지) ===
-    // IDamageable이 없으므로, 다른 스크립트는 이 public 함수를 직접 호출해야 합니다.
     public void TakeDamage(int damage)
     {
         if (currentHP <= 0) return;
@@ -157,8 +154,6 @@ public class Enemy : MonoBehaviour
         StopAllCoroutines();
         Destroy(gameObject);
     }
-
-    // === 이동 및 지면 부착 로직 ===
 
     void TracePlayer()
     {
@@ -212,8 +207,6 @@ public class Enemy : MonoBehaviour
         }
     }
 
-    // === 자폭 로직 ===
-
     private void StartSuicideCountdown()
     {
         suicideCoroutine = StartCoroutine(SuicideCountdown());
@@ -232,11 +225,9 @@ public class Enemy : MonoBehaviour
             elapsedTime += Time.deltaTime;
             blinkTimer += Time.deltaTime;
 
-            // 크기 확대 연출
             float progress = elapsedTime / suicideDelay;
             transform.localScale = Vector3.Lerp(originalScale, originalScale * maxSuicideScale, progress);
 
-            // 깜빡임 연출
             if (blinkTimer >= blinkInterval)
             {
                 blinkTimer -= blinkInterval;
@@ -254,22 +245,55 @@ public class Enemy : MonoBehaviour
 
     void Explode()
     {
-        Collider[] hitColliders = Physics.OverlapSphere(transform.position, explosionRadius);
+        Vector3 explosionCenter = transform.position;
+
+        // 1. 플레이어에게 데미지 적용
+        Collider[] hitColliders = Physics.OverlapSphere(explosionCenter, explosionRadius);
         foreach (var hitCollider in hitColliders)
         {
-            // 플레이어에게 데미지 적용
             if (hitCollider.CompareTag("Player"))
             {
-                // 기존: PlayerController playerScript = hitCollider.GetComponent<PlayerController>();
-                // 💡 PlayerLightHealth 스크립트를 가져옵니다.
                 PlayerLightHealth playerHealthScript = hitCollider.GetComponent<PlayerLightHealth>();
-
                 if (playerHealthScript != null)
                 {
-                    // **데미지를 float 형식으로 전달합니다.**
-                    // baseExplosionDamage 또는 calculatedDamage는 int이므로 (float)으로 형변환하여 전달합니다.
                     playerHealthScript.TakeDamage((float)calculatedDamage);
-                    Debug.Log($"자폭병이 플레이어에게 {calculatedDamage} 데미지를 주었습니다.");
+                }
+            }
+        }
+
+        // 2. 💡 [추가된 로직] 주변 블록 파괴
+        Vector3Int centerPos = Vector3Int.RoundToInt(explosionCenter);
+        int radius = blockExplosionRadius;
+
+        for (int x = -radius; x <= radius; x++)
+        {
+            for (int y = -radius; y <= radius; y++)
+            {
+                for (int z = -radius; z <= radius; z++)
+                {
+                    Vector3 targetPos = centerPos + new Vector3Int(x, y, z);
+
+                    // 해당 위치에 있는 블록을 찾음
+                    // Physics.OverlapSphere 대신 Physics.OverlapBox를 사용하거나 
+                    // Physics.OverlapSphere를 사용하되, 블록 레이어만 체크하는 것이 더 효율적일 수 있습니다.
+
+                    // Simple Raycast/Overlap 대신, Voxel 맵 구조를 이용해 해당 좌표의 Collider를 검색합니다.
+                    Collider[] blockCheck = Physics.OverlapBox(targetPos, Vector3.one * 0.45f, Quaternion.identity, LayerMask.GetMask("Block") != 0 ? LayerMask.GetMask("Block") : ~0);
+
+                    foreach (Collider col in blockCheck)
+                    {
+                        // 태그로 한 번 더 확인하여 Block 컴포넌트를 가져옴
+                        if (col.CompareTag("Block"))
+                        {
+                            Block block = col.GetComponent<Block>();
+                            if (block != null)
+                            {
+                                // Block.Hit 함수를 사용하여 파괴 (인벤토리 추가 방지 위해 null 전달)
+                                // 데미지는 블록을 한 번에 파괴할 수 있는 큰 값으로 설정
+                                block.Hit(block.maxHP + 1, null);
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -277,7 +301,6 @@ public class Enemy : MonoBehaviour
         Die();
     }
 
-    // DeadZone 처리
     //private void OnTriggerEnter(Collider other)
     //{
     //    if (other.CompareTag("DeadZone")) Die();
