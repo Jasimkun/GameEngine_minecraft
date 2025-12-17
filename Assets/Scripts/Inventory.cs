@@ -13,7 +13,8 @@ public class Inventory : MonoBehaviour
         invenUI = FindObjectOfType<InventoryUI>();
     }
 
-    public int GetCount(ItemType id)
+    // [수정된 부분] 원래 GetCount 였던 이름을 GetItemCount로 변경했습니다.
+    public int GetItemCount(ItemType id)
     {
         items.TryGetValue(id, out var count);
         return count;

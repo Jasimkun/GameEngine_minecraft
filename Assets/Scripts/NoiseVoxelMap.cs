@@ -9,28 +9,23 @@ public class NoiseVoxelMap : MonoBehaviour
     public int mapID = 0;
     public bool resetMapData = false;
 
-    // 게임 세션 동안 초기화 여부 체크 (게임을 껐다 켜면 초기화됨)
     private static bool isSessionInitialized = false;
 
-    // --- 데이터 저장용 ---
-    // 플레이어가 변경한 블록 정보 (0:파괴됨, 그외:설치된 블록타입)
+    // 데이터 저장용
     private Dictionary<Vector3Int, int> modifiedBlocks = new Dictionary<Vector3Int, int>();
-
-    // 현재 눈에 보이는(활성화된) 블록 관리 (좌표로 검색용)
     public Dictionary<Vector3Int, GameObject> activeBlocks = new Dictionary<Vector3Int, GameObject>();
 
-    // --- 맵 설정 변수들 ---
+    // 맵 설정 변수
     public float offsetX;
     public float offsetZ;
-
     public int width = 20;
     public int depth = 20;
     public int maxHeight = 16;
     public int waterLevel = 4;
-
     [SerializeField] public float noiseScale = 20f;
 
-    // --- 프리팹 연결 ---
+    // 프리팹 연결
+    [Header("Block Prefabs")]
     public GameObject grassPrefab;
     public GameObject dirtPrefab;
     public GameObject waterPrefab;
@@ -46,33 +41,29 @@ public class NoiseVoxelMap : MonoBehaviour
     [Header("Tree Generation")]
     public int minTrees = 5;
     public int maxTrees = 10;
-    public ItemType woodDropType = ItemType.Wood;
-    public int woodDropAmount = 3;
 
     [Header("Stone Generation")]
     public int minDepthForStone = 4;
-    public int maxDepthForStone = 5;
 
-    // 지형 높이 저장용
+    [Header("Loading Settings")]
+    public GameObject loadingPanel;
+    public MonoBehaviour playerController;
+
     private Dictionary<Vector2Int, int> topBlockHeight = new Dictionary<Vector2Int, int>();
 
     void Start()
     {
-        // 1. 게임 시작 시 데이터 초기화 로직
         if (!isSessionInitialized)
         {
             PlayerPrefs.DeleteAll();
-            Debug.Log("새 게임 시작: 모든 맵 데이터가 초기화되었습니다.");
             isSessionInitialized = true;
         }
 
         GameObject player = GameObject.FindGameObjectWithTag("Player");
         if (player != null) playerTransform = player.transform;
 
-        // 2. 저장된 맵 데이터 불러오기
         LoadMapData();
 
-        // 3. 맵 시드(Seed) 설정
         string keyX = $"Map_{mapID}_SeedX";
         string keyZ = $"Map_{mapID}_SeedZ";
 
@@ -90,7 +81,6 @@ public class NoiseVoxelMap : MonoBehaviour
             PlayerPrefs.Save();
         }
 
-        // 4. 맵 생성 시작
         GenerateMap();
     }
 
@@ -101,16 +91,21 @@ public class NoiseVoxelMap : MonoBehaviour
 
     IEnumerator GenerateMapRoutine()
     {
-        topBlockHeight.Clear();
+        if (loadingPanel != null) loadingPanel.SetActive(true);
 
-        // 기존에 생성된 블록이 있다면 모두 삭제 (초기화)
-        foreach (var block in activeBlocks.Values)
+        Rigidbody playerRB = null;
+        if (playerTransform != null)
         {
-            if (block != null) Destroy(block);
+            playerRB = playerTransform.GetComponent<Rigidbody>();
+            if (playerRB != null) playerRB.isKinematic = true;
+            if (playerController != null) playerController.enabled = false;
         }
+
+        topBlockHeight.Clear();
+        foreach (var block in activeBlocks.Values) if (block != null) Destroy(block);
         activeBlocks.Clear();
 
-        // [단계 1] 높이 데이터 먼저 계산 (전체 지형의 높이를 알아야 숨김 처리가 가능)
+        // 높이 계산
         for (int x = 0; x < width; x++)
         {
             for (int z = 0; z < depth; z++)
@@ -126,28 +121,22 @@ public class NoiseVoxelMap : MonoBehaviour
 
         int blocksCreatedPerFrame = 0;
 
-        // [단계 2] 실제 블록 생성 루프
+        // 블록 생성
         for (int x = 0; x < width; x++)
         {
             for (int z = 0; z < depth; z++)
             {
                 int h = topBlockHeight[new Vector2Int(x, z)];
 
-                // 지형 생성 (바닥부터 높이 h까지)
                 for (int y = 0; y <= h; y++)
                 {
-                    // 파괴된 블록이면 생성 스킵
                     if (CheckIsDestroyed(x, y, z)) continue;
-
-                    // 💡 [최적화 핵심] 사방이 막혀있으면 생성하지 않음 (투명 처리)
                     if (IsHidden(x, y, z)) continue;
 
-                    // 생성 타입 결정
                     ItemType type = ItemType.Dirt;
                     if (y == h) type = ItemType.Grass;
                     else if (h - y >= minDepthForStone) type = ItemType.Stone;
 
-                    // 플레이어가 설치한 블록 정보가 있다면 덮어쓰기
                     Vector3Int pos = new Vector3Int(x, y, z);
                     if (modifiedBlocks.ContainsKey(pos) && modifiedBlocks[pos] != 0)
                         type = (ItemType)modifiedBlocks[pos];
@@ -156,18 +145,14 @@ public class NoiseVoxelMap : MonoBehaviour
                     blocksCreatedPerFrame++;
                 }
 
-                // 물 생성
                 for (int y = h + 1; y <= waterLevel; y++)
                 {
                     if (CheckIsDestroyed(x, y, z)) continue;
-
-                    // 물은 투명하니까 보통 다 그려줍니다.
                     SpawnBlockObject(new Vector3Int(x, y, z), ItemType.Water);
                     blocksCreatedPerFrame++;
                 }
             }
 
-            // 프레임 드랍 방지를 위해 끊어서 생성
             if (blocksCreatedPerFrame > 100)
             {
                 blocksCreatedPerFrame = 0;
@@ -175,129 +160,271 @@ public class NoiseVoxelMap : MonoBehaviour
             }
         }
 
-        // 나무 생성 및 플레이어 이동
         PlaceTrees();
         MovePlayerToCenter();
 
-        // 시야 거리 최적화 코루틴 시작
-        if (playerTransform != null) StartCoroutine(OptimizeBlocksRoutine());
+        yield return new WaitForSeconds(0.5f);
 
-        Debug.Log("맵 생성 완료!");
+        if (loadingPanel != null) loadingPanel.SetActive(false);
+
+        if (playerTransform != null)
+        {
+            if (playerRB != null)
+            {
+                playerRB.isKinematic = false;
+                playerRB.velocity = Vector3.zero;
+            }
+            if (playerController != null) playerController.enabled = true;
+        }
+
+        StartCoroutine(OptimizeBlocksRoutine());
     }
 
-    // 💡 [핵심 함수 1] 해당 좌표가 사방에 꽉 막혀있는지 확인
+    // --- 나무 생성 로직 (데이터 저장 추가됨) ---
+    private void PlaceTrees()
+    {
+        if (woodPrefab == null) return;
+        int numberOfTrees = Random.Range(minTrees, maxTrees + 1);
+        List<Vector2Int> availablePositions = new List<Vector2Int>(topBlockHeight.Keys);
+        List<Vector2Int> safePositions = new List<Vector2Int>();
+
+        foreach (var posXZ in availablePositions)
+        {
+            int highestBlockY = topBlockHeight[posXZ];
+            if (highestBlockY >= waterLevel) safePositions.Add(posXZ);
+        }
+
+        if (safePositions.Count < numberOfTrees) numberOfTrees = safePositions.Count;
+        List<Vector2Int> treePositions = new List<Vector2Int>();
+
+        for (int i = 0; i < numberOfTrees; i++)
+        {
+            int randomIndex = Random.Range(0, safePositions.Count);
+            treePositions.Add(safePositions[randomIndex]);
+            safePositions.RemoveAt(randomIndex);
+        }
+
+        foreach (var posXZ in treePositions)
+        {
+            int x = posXZ.x;
+            int z = posXZ.y;
+            int y = topBlockHeight[posXZ] + 1;
+
+            if (!CheckIsDestroyed(x, y, z))
+            {
+                Vector3Int treePos = new Vector3Int(x, y, z);
+
+                // 🛠️ [수정] 나무 데이터 저장 (그래야 캘 때 나무가 나옴)
+                if (!modifiedBlocks.ContainsKey(treePos))
+                    modifiedBlocks.Add(treePos, (int)ItemType.Wood);
+                else
+                    modifiedBlocks[treePos] = (int)ItemType.Wood;
+
+                SpawnBlockObject(treePos, ItemType.Wood);
+            }
+        }
+    }
+
+    // --- 블록 파괴 및 아이템 드롭 ---
+    public void RegisterBlockDestruction(Vector3Int pos)
+    {
+        ItemType typeToDrop = GetBlockTypeAt(pos.x, pos.y, pos.z);
+
+        if (modifiedBlocks.ContainsKey(pos)) modifiedBlocks[pos] = 0;
+        else modifiedBlocks.Add(pos, 0);
+        SaveMapData();
+
+        if (activeBlocks.ContainsKey(pos)) activeBlocks.Remove(pos);
+        UpdateNeighbors(pos);
+
+        // 아이템 드롭 (무조건)
+        SpawnBlockDrop(pos, typeToDrop);
+    }
+
+    // 블록 프리팹을 작게 만들어서 드롭하는 함수
+    // 블록 프리팹을 작게 만들어서 드롭하는 함수
+    void SpawnBlockDrop(Vector3Int pos, ItemType type)
+    {
+        GameObject prefabToSpawn = GetPrefabByType(type);
+        if (prefabToSpawn == null) return;
+
+        // 🌟 [수정됨] 프리팹에 설정된 dropCount(개수)를 미리 읽어옵니다!
+        int amountToDrop = 1;
+        Block originBlockScript = prefabToSpawn.GetComponent<Block>();
+        if (originBlockScript != null)
+        {
+            amountToDrop = originBlockScript.dropCount;
+        }
+
+        Vector3 randomOffset = Random.insideUnitSphere * 0.2f;
+        Vector3 spawnPos = new Vector3(pos.x, pos.y, pos.z) + Vector3.one * 0.5f + randomOffset;
+
+        GameObject drop = Instantiate(prefabToSpawn, spawnPos, Quaternion.identity);
+        drop.name = "Drop_" + type.ToString();
+
+        // 블록 -> 아이템 변환
+        Block blockScript = drop.GetComponent<Block>();
+        if (blockScript != null) Destroy(blockScript);
+        drop.transform.localScale = Vector3.one * 0.25f;
+
+        Rigidbody rb = drop.AddComponent<Rigidbody>();
+        rb.mass = 1f;
+
+        ItemPickup pickup = drop.AddComponent<ItemPickup>();
+        pickup.itemType = type;
+
+        // 🌟 [적용] 읽어온 개수를 여기에 대입합니다.
+        pickup.amount = amountToDrop;
+
+        pickup.pickupRange = 3f;
+        pickup.moveSpeed = 10f;
+
+        Collider col = drop.GetComponent<Collider>();
+        if (col != null) col.isTrigger = false;
+
+        Renderer rend = drop.GetComponent<Renderer>();
+        if (rend != null)
+        {
+            rend.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            rend.receiveShadows = false;
+        }
+
+        Collider dropCol = drop.GetComponent<Collider>();
+
+        // playerTransform은 Start 함수에서 이미 찾아뒀음
+        if (playerTransform != null && dropCol != null)
+        {
+            Collider playerCol = playerTransform.GetComponent<Collider>();
+
+            // 만약 플레이어에 Collider가 없고 CharacterController가 있다면 이걸로 가져옴
+            if (playerCol == null) playerCol = playerTransform.GetComponent<CharacterController>();
+
+            if (playerCol != null)
+            {
+                // "이 아이템과 플레이어는 서로 물리적으로 무시해라!"
+                Physics.IgnoreCollision(playerCol, dropCol, true);
+            }
+        }
+    }
+
+    // --- 아이템 던지기 (Q키/우클릭) ---
+    public void ThrowItem(Vector3 startPos, ItemType type, int count, Vector3 throwDirection)
+    {
+        GameObject prefabToSpawn = GetPrefabByType(type);
+        if (prefabToSpawn == null) return;
+
+        GameObject drop = Instantiate(prefabToSpawn, startPos, Quaternion.identity);
+        drop.name = "Thrown_" + type.ToString();
+
+        Block blockScript = drop.GetComponent<Block>();
+        if (blockScript != null) Destroy(blockScript);
+        drop.transform.localScale = Vector3.one * 0.25f;
+
+        Rigidbody rb = drop.AddComponent<Rigidbody>();
+        rb.mass = 1f;
+        rb.drag = 0.5f;
+
+        ItemPickup pickup = drop.AddComponent<ItemPickup>();
+        pickup.itemType = type;
+        pickup.amount = count;
+        pickup.pickupDelay = 1.0f; // 1초간 획득 불가
+        pickup.pickupRange = 3f;
+        pickup.moveSpeed = 10f;
+
+        Collider dropCol = drop.GetComponent<Collider>();
+        if (dropCol != null) dropCol.isTrigger = false;
+
+        // 플레이어 충돌 무시
+        if (playerTransform != null && dropCol != null)
+        {
+            Collider playerCol = playerTransform.GetComponent<Collider>();
+            if (playerCol != null) Physics.IgnoreCollision(playerCol, dropCol, true);
+        }
+
+        rb.AddForce(throwDirection, ForceMode.Impulse);
+    }
+
+    // --- 유틸리티 및 기타 함수들 ---
+
     bool IsHidden(int x, int y, int z)
     {
-        // 맵의 가장자리는 뚫려있다고 가정 (보여야 하니까)
         if (x <= 0 || x >= width - 1 || z <= 0 || z >= depth - 1 || y <= 0) return false;
-
-        // 상하좌우앞뒤 6면 확인
-        if (!IsSolid(x, y + 1, z)) return false; // 위가 뚫렸으면 보여야 함
-        if (!IsSolid(x, y - 1, z)) return false; // 아래가 뚫렸으면 보여야 함
+        if (!IsSolid(x, y + 1, z)) return false;
+        if (!IsSolid(x, y - 1, z)) return false;
         if (!IsSolid(x + 1, y, z)) return false;
         if (!IsSolid(x - 1, y, z)) return false;
         if (!IsSolid(x, y, z + 1)) return false;
         if (!IsSolid(x, y, z - 1)) return false;
-
-        // 여기까지 왔으면 6면이 다 막힌 것 -> 숨겨도 됨
         return true;
     }
 
-    // 💡 [핵심 함수 2] 해당 좌표에 블록이 존재하는지 판단 (논리적 확인)
     bool IsSolid(int x, int y, int z)
     {
         Vector3Int pos = new Vector3Int(x, y, z);
-
-        // 1. 유저가 파괴했으면 공기(False)
         if (modifiedBlocks.ContainsKey(pos) && modifiedBlocks[pos] == 0) return false;
-
-        // 2. 유저가 설치했으면 고체(True)
         if (modifiedBlocks.ContainsKey(pos) && modifiedBlocks[pos] != 0) return true;
-
-        // 3. 자연 지형 높이보다 아래인가?
         if (topBlockHeight.TryGetValue(new Vector2Int(x, z), out int h))
         {
             if (y <= h) return true;
         }
-
-        // 4. 물은 투명하므로 Solid로 치지 않음 (물 뒤의 땅은 보여야 함)
-        if (y <= waterLevel) return false;
-
-        return false; // 공기
+        return false;
     }
 
-    // 💡 [핵심 함수 3] 블록이 파괴되었을 때 주변 블록을 다시 보여줌
     public void UpdateNeighbors(Vector3Int brokenPos)
     {
         Vector3Int[] neighbors = {
-            brokenPos + Vector3Int.up,
-            brokenPos + Vector3Int.down,
-            brokenPos + Vector3Int.left,
-            brokenPos + Vector3Int.right,
-            brokenPos + Vector3Int.forward,
-            brokenPos + Vector3Int.back
+            brokenPos + Vector3Int.up, brokenPos + Vector3Int.down,
+            brokenPos + Vector3Int.left, brokenPos + Vector3Int.right,
+            brokenPos + Vector3Int.forward, brokenPos + Vector3Int.back
         };
 
         foreach (var pos in neighbors)
         {
-            // 이미 눈에 보이는 블록이면 패스
             if (activeBlocks.ContainsKey(pos)) continue;
-
-            // 데이터 상으로는 블록이 있어야 하는 자리인가?
             if (IsSolid(pos.x, pos.y, pos.z))
             {
-                // 그렇다면 이제 드러나야 한다! -> 생성
                 ItemType type = GetBlockTypeAt(pos.x, pos.y, pos.z);
                 SpawnBlockObject(pos, type);
             }
         }
     }
 
-    // 좌표의 블록 타입 알아내기
     ItemType GetBlockTypeAt(int x, int y, int z)
     {
         Vector3Int pos = new Vector3Int(x, y, z);
-        // 유저 설치 블록 확인
         if (modifiedBlocks.ContainsKey(pos) && modifiedBlocks[pos] != 0)
             return (ItemType)modifiedBlocks[pos];
 
-        // 자연 생성 로직 확인
         if (topBlockHeight.TryGetValue(new Vector2Int(x, z), out int h))
         {
             if (y == h) return ItemType.Grass;
             if (h - y >= minDepthForStone) return ItemType.Stone;
             return ItemType.Dirt;
         }
-        return ItemType.Dirt; // 기본값
+        return ItemType.Dirt;
     }
 
-    // === 외부 호출 및 기능 함수들 ===
-
-    // 블록 파괴 시 호출 (Block.cs에서 호출)
-    public void RegisterBlockDestruction(Vector3Int pos)
+    GameObject GetPrefabByType(ItemType type)
     {
-        // 1. 파괴 정보 저장
-        if (modifiedBlocks.ContainsKey(pos)) modifiedBlocks[pos] = 0;
-        else modifiedBlocks.Add(pos, 0);
-        SaveMapData();
-
-        // 2. 현재 보이는 블록 리스트에서 제거
-        if (activeBlocks.ContainsKey(pos)) activeBlocks.Remove(pos);
-
-        // 3. 주변에 숨어있던 친구들 깨우기 (매우 중요)
-        UpdateNeighbors(pos);
+        switch (type)
+        {
+            case ItemType.Dirt: return dirtPrefab;
+            case ItemType.Grass: return grassPrefab;
+            case ItemType.Water: return null;
+            case ItemType.Stone: return stonePrefab;
+            case ItemType.Wood: return woodPrefab;
+            case ItemType.Iron: return orePrefab;
+            default: return null;
+        }
     }
 
-    // 블록 설치 시 호출 (PlayerHarvester.cs에서 호출)
     public void PlaceTile(Vector3Int pos, ItemType type)
     {
         int typeID = (int)type;
         if (modifiedBlocks.ContainsKey(pos)) modifiedBlocks[pos] = typeID;
         else modifiedBlocks.Add(pos, typeID);
         SaveMapData();
-
         SpawnBlockObject(pos, type);
-        // 설치 시에는 주변을 가리는 로직이 필요할 수 있지만, 복잡도를 위해 생략 (기능상 문제 없음)
     }
 
     bool CheckIsDestroyed(int x, int y, int z)
@@ -307,29 +434,16 @@ public class NoiseVoxelMap : MonoBehaviour
         return false;
     }
 
-    // 실제 게임 오브젝트 생성 함수
     void SpawnBlockObject(Vector3Int pos, ItemType type)
     {
-        // 이미 생성된 블록이면 중복 생성 방지
         if (activeBlocks.ContainsKey(pos)) return;
-
-        GameObject prefab = null;
-        switch (type)
-        {
-            case ItemType.Dirt: prefab = dirtPrefab; break;
-            case ItemType.Grass: prefab = grassPrefab; break;
-            case ItemType.Water: prefab = waterPrefab; break;
-            case ItemType.Stone: prefab = stonePrefab; break;
-            case ItemType.Wood: prefab = woodPrefab; break;
-            case ItemType.Iron: prefab = orePrefab; break;
-        }
+        GameObject prefab = GetPrefabByType(type);
+        if (type == ItemType.Water) prefab = waterPrefab; // 물 예외 처리
 
         if (prefab != null)
         {
             var go = Instantiate(prefab, (Vector3)pos, Quaternion.identity, transform);
             go.name = $"{type}_{pos.x}_{pos.y}_{pos.z}";
-
-            // 활성 블록 리스트에 등록
             activeBlocks.Add(pos, go);
         }
     }
@@ -340,28 +454,20 @@ public class NoiseVoxelMap : MonoBehaviour
         int centerX = width / 2;
         int centerZ = depth / 2;
         int targetY = maxHeight + 5;
-
         Vector2Int centerPos = new Vector2Int(centerX, centerZ);
         if (topBlockHeight.ContainsKey(centerPos)) targetY = topBlockHeight[centerPos] + 2;
-
-        // 물 높이보다 낮으면 물 위로
         if (targetY <= waterLevel) targetY = waterLevel + 2;
 
         playerTransform.position = new Vector3(centerX, targetY, centerZ);
-
-        // 물리 속도 초기화
         Rigidbody rb = playerTransform.GetComponent<Rigidbody>();
         if (rb != null) rb.velocity = Vector3.zero;
     }
 
-    // === 저장 및 로드 ===
     void SaveMapData()
     {
         StringBuilder sb = new StringBuilder();
         foreach (var kvp in modifiedBlocks)
-        {
             sb.Append($"{kvp.Key.x},{kvp.Key.y},{kvp.Key.z},{kvp.Value}|");
-        }
         PlayerPrefs.SetString($"MapData_{mapID}", sb.ToString());
     }
 
@@ -374,10 +480,8 @@ public class NoiseVoxelMap : MonoBehaviour
             PlayerPrefs.DeleteKey($"Map_{mapID}_SeedZ");
             return;
         }
-
         string data = PlayerPrefs.GetString($"MapData_{mapID}", "");
         if (string.IsNullOrEmpty(data)) return;
-
         string[] entries = data.Split('|');
         foreach (string entry in entries)
         {
@@ -394,64 +498,13 @@ public class NoiseVoxelMap : MonoBehaviour
         }
     }
 
-    // === 기타 배치 함수들 (Load시 복구용) ===
-    void RestorePlacedBlocks()
-    {
-        foreach (var kvp in modifiedBlocks)
-        {
-            if (kvp.Value != 0) SpawnBlockObject(kvp.Key, (ItemType)kvp.Value);
-        }
-    }
-
-    // === 단순 배치 헬퍼 함수 ===
-    private void PlaceWater(int x, int y, int z) { SpawnBlockObject(new Vector3Int(x, y, z), ItemType.Water); }
-    private void PlaceDirt(int x, int y, int z) { SpawnBlockObject(new Vector3Int(x, y, z), ItemType.Dirt); }
-    private void PlaceStone(int x, int y, int z) { SpawnBlockObject(new Vector3Int(x, y, z), ItemType.Stone); }
-    private void PlaceGrass(int x, int y, int z) { SpawnBlockObject(new Vector3Int(x, y, z), ItemType.Grass); }
-    private void PlaceWood(int x, int y, int z)
-    {
-        SpawnBlockObject(new Vector3Int(x, y, z), ItemType.Wood);
-    }
-
-    private void PlaceTrees()
-    {
-        if (woodPrefab == null) return;
-        int numberOfTrees = Random.Range(minTrees, maxTrees + 1);
-        List<Vector2Int> availablePositions = new List<Vector2Int>(topBlockHeight.Keys);
-        List<Vector2Int> safePositions = new List<Vector2Int>();
-
-        foreach (var posXZ in availablePositions)
-        {
-            int highestBlockY = topBlockHeight[posXZ];
-            if (highestBlockY >= waterLevel) safePositions.Add(posXZ);
-        }
-
-        if (safePositions.Count < numberOfTrees) numberOfTrees = safePositions.Count;
-        List<Vector2Int> treePositions = new List<Vector2Int>();
-        for (int i = 0; i < numberOfTrees; i++)
-        {
-            int randomIndex = Random.Range(0, safePositions.Count);
-            treePositions.Add(safePositions[randomIndex]);
-            safePositions.RemoveAt(randomIndex);
-        }
-        foreach (var posXZ in treePositions)
-        {
-            int x = posXZ.x;
-            int z = posXZ.y;
-            int y = topBlockHeight[posXZ] + 1;
-            // 해당 위치가 파괴되지 않았으면 나무 생성
-            if (!CheckIsDestroyed(x, y, z)) SpawnBlockObject(new Vector3Int(x, y, z), ItemType.Wood);
-        }
-    }
-
-    // === 최적화 루틴 ===
     IEnumerator OptimizeBlocksRoutine()
     {
         float viewDistSqr = viewDistance * viewDistance;
         while (true)
         {
+            if (playerTransform == null) yield break;
             Vector3 playerPos = playerTransform.position;
-            // Dictionary는 루프 돌면서 수정 불가능하므로 리스트로 키만 복사
             List<GameObject> checkList = new List<GameObject>(activeBlocks.Values);
 
             foreach (var go in checkList)

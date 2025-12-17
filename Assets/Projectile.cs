@@ -30,7 +30,7 @@ public class Projectile : MonoBehaviour
             Enemy enemy = other.GetComponent<Enemy>();
             if (enemy != null)
             {
-                enemy.TakeDamage(1); // 체력 1 감소
+                //enemy.TakeDamage(1); // 체력 1 감소
             }
 
             Destroy(gameObject); // 총알 제거

@@ -5,8 +5,8 @@ using UnityEngine.UI;
 
 public class Enemy : MonoBehaviour
 {
-    // === 상태 열거형 ===
-    public enum EnemyState { Idle, Trace, RunAway, Suicide }
+    // === 상태 열거형 (RunAway 삭제됨) ===
+    public enum EnemyState { Idle, Trace, Suicide }
     public EnemyState state = EnemyState.Idle;
 
     // === 이동 및 추적 설정 ===
@@ -14,10 +14,10 @@ public class Enemy : MonoBehaviour
     public float traceRange = 15f;
     public float suicideRange = 3f;
 
-    // === 넉백 설정 (추가됨) ===
+    // === 넉백 설정 ===
     [Header("Knockback Settings")]
-    public float knockbackForce = 5f; // 밀려나는 힘
-    public float knockbackDuration = 0.3f; // 밀려나는 시간 (스턴 시간)
+    public float knockbackForce = 5f;
+    public float knockbackDuration = 0.3f;
 
     // === 자폭 및 경고 설정 ===
     public float suicideDelay = 3f;
@@ -45,7 +45,7 @@ public class Enemy : MonoBehaviour
 
     private int calculatedMaxHP;
     private int calculatedDamage;
-    private const float RUN_AWAY_HP_PERCENT = 0.2f;
+    // private const float RUN_AWAY_HP_PERCENT = 0.2f; // 삭제됨
 
     // === 컴포넌트 ===
     private Transform player;
@@ -78,7 +78,6 @@ public class Enemy : MonoBehaviour
         // 평소에는 물리 연산을 꺼둡니다 (직접 이동 제어 위함)
         enemyRigidbody.isKinematic = true;
         enemyRigidbody.useGravity = false;
-        // 충돌은 하되 회전해서 넘어지지 않도록 설정
         enemyRigidbody.constraints = RigidbodyConstraints.FreezeRotation;
 
         if (enemyRenderer != null)
@@ -103,45 +102,44 @@ public class Enemy : MonoBehaviour
         switch (state)
         {
             case EnemyState.Idle:
-                if (currentHP <= calculatedMaxHP * RUN_AWAY_HP_PERCENT) state = EnemyState.RunAway;
-                else if (dist < traceRange) state = EnemyState.Trace;
+                // 도망 로직 삭제: 바로 추적 거리 체크
+                if (dist < traceRange) state = EnemyState.Trace;
                 break;
 
             case EnemyState.Trace:
-                if (currentHP <= calculatedMaxHP * RUN_AWAY_HP_PERCENT) state = EnemyState.RunAway;
-                else if (dist < suicideRange) { state = EnemyState.Suicide; if (suicideCoroutine == null) StartSuicideCountdown(); }
-                else TracePlayer();
+                // 도망 로직 삭제: 자폭 범위 or 계속 추적
+                if (dist < suicideRange)
+                {
+                    state = EnemyState.Suicide;
+                    if (suicideCoroutine == null) StartSuicideCountdown();
+                }
+                else
+                {
+                    TracePlayer();
+                }
                 break;
 
             case EnemyState.Suicide:
                 break;
 
-            case EnemyState.RunAway:
-                RunAwayFromPlayer();
-                float runawayDistance = 15f;
-                if (Vector3.Distance(player.position, transform.position) > runawayDistance) state = EnemyState.Idle;
-                break;
+                // case EnemyState.RunAway: 삭제됨
         }
     }
 
-    // [수정됨] 데미지와 함께 때린 사람의 위치(attackerPos)를 받습니다.
-    // 만약 위치를 모르면 null을 넣으세요.
     public void TakeDamage(int damage, Vector3? attackerPos = null)
     {
         if (currentHP <= 0) return;
 
-        // 깜빡임 효과
         if (blinkCoroutine != null) StopCoroutine(blinkCoroutine);
         blinkCoroutine = StartCoroutine(BlinkEffect());
 
-        // 체력 감소
         currentHP -= damage;
         if (hpSlider != null) hpSlider.value = currentHP;
 
-        // 넉백 실행 (공격자가 있을 경우에만)
+        // 넉백 실행
         if (attackerPos.HasValue && currentHP > 0)
         {
-            StopCoroutine("KnockbackRoutine"); // 이미 넉백 중이라면 끊고 새로 시작
+            StopCoroutine("KnockbackRoutine");
             StartCoroutine(KnockbackRoutine(attackerPos.Value));
         }
 
@@ -151,33 +149,24 @@ public class Enemy : MonoBehaviour
         }
     }
 
-    // [추가됨] 넉백 코루틴
     IEnumerator KnockbackRoutine(Vector3 attackerPos)
     {
-        // 1. 밀려날 방향 계산 (내 위치 - 공격자 위치)
         Vector3 knockbackDir = (transform.position - attackerPos).normalized;
-
-        // 2. 약간 위로 튀어 오르게 설정 (마인크래프트 느낌)
         knockbackDir += Vector3.up * 0.5f;
         knockbackDir.Normalize();
 
-        // 3. 물리 엔진 활성화
         enemyRigidbody.isKinematic = false;
         enemyRigidbody.useGravity = true;
-        enemyRigidbody.velocity = Vector3.zero; // 기존 속도 초기화
+        enemyRigidbody.velocity = Vector3.zero;
 
-        // 4. 힘 가하기 (Impulse는 순간적인 힘)
         enemyRigidbody.AddForce(knockbackDir * knockbackForce, ForceMode.Impulse);
 
-        // 5. 넉백 시간만큼 대기 (이 동안은 Update에서 이동 로직이 멈춤)
         yield return new WaitForSeconds(knockbackDuration);
 
-        // 6. 물리 엔진 비활성화 및 상태 복구
         enemyRigidbody.velocity = Vector3.zero;
         enemyRigidbody.isKinematic = true;
         enemyRigidbody.useGravity = false;
 
-        // 7. 공중에 떠있지 않도록 바닥으로 붙이기
         SnapToGround();
     }
 
@@ -198,6 +187,9 @@ public class Enemy : MonoBehaviour
     {
         currentHP = 0;
         StopAllCoroutines();
+
+        GetComponent<EnemyLoot>().TryDropLoot();
+
         Destroy(gameObject);
     }
 
@@ -217,22 +209,7 @@ public class Enemy : MonoBehaviour
         transform.LookAt(lookTarget);
     }
 
-    void RunAwayFromPlayer()
-    {
-        Vector3 traceDirection = (player.position - transform.position).normalized;
-        Vector3 runDirection = -traceDirection;
-        float runSpeed = movespeed * 2f;
-
-        Vector3 movement = new Vector3(runDirection.x, 0, runDirection.z) * runSpeed * Time.deltaTime;
-        Vector3 nextPosition = transform.position + movement;
-
-        if (CheckGround(nextPosition))
-        {
-            transform.position = nextPosition;
-            SnapToGround();
-        }
-        transform.rotation = Quaternion.LookRotation(runDirection);
-    }
+    // RunAwayFromPlayer() 함수 삭제됨
 
     bool CheckGround(Vector3 position)
     {
@@ -249,7 +226,6 @@ public class Enemy : MonoBehaviour
         RaycastHit hit;
         if (Physics.Raycast(transform.position + Vector3.up * 0.5f, Vector3.down, out hit, groundCheckDistance + 1f))
         {
-            // 부드러운 이동을 위해 위치 보정 (넉백 직후 너무 딱딱하게 붙지 않도록)
             transform.position = new Vector3(transform.position.x, hit.point.y + groundOffset, transform.position.z);
         }
     }
@@ -326,7 +302,7 @@ public class Enemy : MonoBehaviour
                             Block block = col.GetComponent<Block>();
                             if (block != null)
                             {
-                                block.Hit(block.maxHP + 1, null);
+                                block.Hit(block.maxHP + 1);
                             }
                         }
                     }

@@ -29,7 +29,7 @@ public class Boom : MonoBehaviour
             Enemy enemy = other.GetComponent<Enemy>();
             if (enemy != null)
             {
-                enemy.TakeDamage(3); // 체력 1 감소
+                //enemy.TakeDamage(3); // 체력 1 감소
             }
 
             Destroy(gameObject); // 총알 제거

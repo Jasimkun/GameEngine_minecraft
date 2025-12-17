@@ -420,6 +420,7 @@ GameObject:
   - component: {fileID: 3250444080470070582}
   - component: {fileID: 5708206516782917607}
   - component: {fileID: 1994780021949583034}
+  - component: {fileID: 5488492743317834010}
   m_Layer: 0
   m_Name: Enemy
   m_TagString: Enemy
@@ -509,14 +510,39 @@ MonoBehaviour:
   state: 0
   movespeed: 2
   traceRange: 15
-  attackRange: 6
-  attackCooldown: 1.5
-  projectilePrefab: {fileID: 3351031294612343199, guid: fef3814b701b8674080d85d9eeaa3c38,
-    type: 3}
-  firePoint: {fileID: 7258072554887276270}
-  maxHP: 5
+  suicideRange: 3
+  knockbackForce: 5
+  knockbackDuration: 0.3
+  suicideDelay: 3
+  explosionRadius: 3
+  warningColor: {r: 1, g: 1, b: 1, a: 1}
+  baseExplosionDamage: 10
+  blockExplosionRadius: 1
+  blinkInterval: 0.2
+  maxSuicideScale: 1.5
+  groundCheckDistance: 1
+  groundOffset: 0.1
+  baseMaxHP: 10
   currentHP: 0
   hpSlider: {fileID: 3228077032935927126}
+--- !u!114 &5488492743317834010
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5099992602596450727}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a4f612b0c17f5544b715a365326f953, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  itemPrefab: {fileID: 463055303933667152, guid: e496d7249193cb944b92177e13f7c424,
+    type: 3}
+  itemType: 9
+  dropChance: 10
+  minAmount: 1
+  maxAmount: 1
 --- !u!1001 &9133331234171321707
 PrefabInstance:
   m_ObjectHideFlags: 0

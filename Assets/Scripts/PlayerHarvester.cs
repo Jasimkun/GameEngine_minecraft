@@ -2,36 +2,37 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// ItemType은 Block.cs 파일에서 정의된 것으로 가정합니다.
-// public enum ItemType { Dirt, Grass, Water, Iron, Axe, Sword, Pickaxe, Wood }
+// ItemType은 별도 파일이나 상단에 정의되어 있다고 가정
+// public enum ItemType { Dirt, Grass, Water, Iron, Axe, Sword, Pickaxe, Wood, Stone, Light }
 
 public class PlayerHarvester : MonoBehaviour
 {
+    [Header("Settings")]
     public float rayDistance = 5f;
     public LayerMask hitMask = ~0;
     public float hitCooldown = 0.15f;
 
+    [Header("References")]
+    public Inventory inventory;
+    public GameObject selectedBlock; // 미리보기용 반투명 블록
+
     private float _nextHitTime;
     private Camera _cam;
-    public Inventory inventory;
-    InventoryUI invenUI;
-    // 맵 관리를 위해 NoiseVoxelMap 참조 (설치 시 필요)
+    private InventoryUI invenUI;
     private NoiseVoxelMap voxelMap;
-
-    public GameObject selectedBlock;
 
     private void Awake()
     {
         _cam = Camera.main;
+
         if (inventory == null) inventory = gameObject.AddComponent<Inventory>();
         invenUI = FindObjectOfType<InventoryUI>();
-        // 맵 관리 스크립트 찾기 (설치 로직을 위해 필요)
         voxelMap = FindObjectOfType<NoiseVoxelMap>();
     }
 
     void Update()
     {
-        // 1. 현재 어떤 상태인지 판단하기 위한 변수들
+        // 1. 현재 인벤토리 상태 확인
         bool hasItemSelected = invenUI.selectedIndex >= 0;
         bool isTool = false;
         ItemType currentItemType = ItemType.Dirt; // 기본값
@@ -42,29 +43,39 @@ public class PlayerHarvester : MonoBehaviour
             isTool = CheckIsTool(currentItemType);
         }
 
-        // 2. 미리보기 블록(투명 블록) 처리 
+        // =========================================================
+        // 🏗️ 2. 미리보기 블록(Preview) 처리
+        // =========================================================
+        // 도구를 들고 있거나, 맨손(아무것도 선택 안 함)일 때는 미리보기를 숨깁니다.
         if (!hasItemSelected || isTool)
         {
-            selectedBlock.transform.localScale = Vector3.zero;
+            if (selectedBlock) selectedBlock.transform.localScale = Vector3.zero;
         }
         else
         {
+            // 블록을 들고 있을 때만 미리보기 표시
             Ray rayDebug = _cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
             if (Physics.Raycast(rayDebug, out var hitDebug, rayDistance, hitMask, QueryTriggerInteraction.Ignore))
             {
                 Vector3Int placePos = AdjacentCellOnHitFace(hitDebug);
-                selectedBlock.transform.localScale = Vector3.one;
-                selectedBlock.transform.position = placePos;
-                selectedBlock.transform.rotation = Quaternion.identity;
+                if (selectedBlock)
+                {
+                    selectedBlock.transform.localScale = Vector3.one;
+                    selectedBlock.transform.position = placePos;
+                    selectedBlock.transform.rotation = Quaternion.identity;
+                }
             }
             else
             {
-                selectedBlock.transform.localScale = Vector3.zero;
+                if (selectedBlock) selectedBlock.transform.localScale = Vector3.zero;
             }
         }
 
-        // 3. 마우스 클릭 처리
-        // [채굴/공격 모드]: 아무것도 안 들었거나(맨손) OR 도구를 들고 있을 때
+        // =========================================================
+        // 🖱️ 3. 좌클릭 처리 (공격 / 채굴 / 설치)
+        // =========================================================
+
+        // [모드 A] 공격 및 채굴 (맨손이거나 도구를 들었을 때)
         if (!hasItemSelected || isTool)
         {
             if (Input.GetMouseButton(0) && Time.time >= _nextHitTime)
@@ -75,39 +86,30 @@ public class PlayerHarvester : MonoBehaviour
                 if (Physics.Raycast(ray, out var hit, rayDistance, hitMask))
                 {
                     int damage = 1;
-                    if (isTool)
-                    {
-                        damage = GetToolDamage(currentItemType);
-                    }
+                    if (isTool) damage = GetToolDamage(currentItemType);
 
-                    // ====== 💡 적 공격 로직 ======
+                    // 1순위: 적(Enemy) 공격
                     var enemy = hit.collider.GetComponent<Enemy>();
                     if (enemy != null)
                     {
                         enemy.TakeDamage(damage, transform.position);
-                        return; // 적을 공격했으면 다른 로직을 건너뜁니다.
+                        return; // 적을 때렸으면 블록은 안 캠
                     }
-                    // ======================================
 
-                    // ====== 💡 블록 채굴 로직 (적을 맞추지 않았을 때 실행) ======
-
-                    // ⚔️ [핵심 수정] 검(Sword)을 들고 있다면, 적을 공격하지 않았을 경우 블록도 채굴하지 않습니다.
-                    if (currentItemType == ItemType.Sword)
-                    {
-                        // 검은 블록에 데미지를 줄 수 없습니다.
-                        return;
-                    }
+                    // 2순위: 블록 채굴
+                    // (검으로는 블록을 못 캐게 막음)
+                    if (currentItemType == ItemType.Sword) return;
 
                     var block = hit.collider.GetComponent<Block>();
                     if (block != null)
                     {
-                        block.Hit(damage, inventory);
+                        // [수정됨] 인벤토리 전달 삭제 (맵 시스템이 드롭 처리함)
+                        block.Hit(damage);
                     }
-                    // =========================================================
                 }
             }
         }
-        // [설치 모드]: 블록을 들고 있을 때 (도구가 아닐 때)
+        // [모드 B] 블록 설치 (블록 아이템을 들고 있을 때)
         else
         {
             if (Input.GetMouseButtonDown(0))
@@ -117,10 +119,9 @@ public class PlayerHarvester : MonoBehaviour
                 {
                     Vector3Int placePos = AdjacentCellOnHitFace(hit);
 
-                    // 설치 시도
+                    // 인벤토리에서 아이템 소모 성공 시 설치
                     if (inventory.Consume(currentItemType, 1))
                     {
-                        // 맵 관리 클래스의 PlaceTile 호출
                         if (voxelMap != null)
                         {
                             voxelMap.PlaceTile(placePos, currentItemType);
@@ -129,15 +130,49 @@ public class PlayerHarvester : MonoBehaviour
                 }
             }
         }
+
+        // =========================================================
+        // 🗑️ 4. 아이템 버리기 기능 (Q키 & 우클릭)
+        // =========================================================
+        if (hasItemSelected) // 아이템을 들고 있을 때만 작동
+        {
+            // 던질 시작 위치 (카메라 앞)
+            Vector3 throwStartPos = transform.position + _cam.transform.forward * 1.0f + Vector3.up * 1.5f;
+            // 던질 힘과 방향
+            Vector3 throwForce = _cam.transform.forward * 8f;
+
+            // [Q키]: 뭉텅이로 버리기
+            if (Input.GetKeyDown(KeyCode.Q))
+            {
+                // 인벤토리에 이 아이템이 몇 개 있는지 확인
+                // (Inventory.cs에 GetItemCount 함수가 있어야 합니다!)
+                int count = inventory.GetItemCount(currentItemType);
+
+                if (count > 0 && inventory.Consume(currentItemType, count))
+                {
+                    voxelMap.ThrowItem(throwStartPos, currentItemType, count, throwForce);
+                }
+            }
+
+            // [우클릭]: 1개씩 버리기
+            // (설치 모드일 때 좌클릭과 겹치지 않으므로 안전)
+            if (Input.GetMouseButtonDown(1))
+            {
+                if (inventory.Consume(currentItemType, 1))
+                {
+                    voxelMap.ThrowItem(throwStartPos, currentItemType, 1, throwForce);
+                }
+            }
+        }
     }
 
-    // 아이템이 도구인지 판별하는 함수
+    // --- Helper Functions ---
+
     bool CheckIsTool(ItemType type)
     {
         return type == ItemType.Axe || type == ItemType.Pickaxe || type == ItemType.Sword;
     }
 
-    // 도구별 데미지를 반환하는 함수 (적 공격에도 사용됨)
     int GetToolDamage(ItemType type)
     {
         switch (type)
@@ -145,7 +180,7 @@ public class PlayerHarvester : MonoBehaviour
             case ItemType.Sword: return 3;
             case ItemType.Pickaxe: return 5;
             case ItemType.Axe: return 2;
-            default: return 1; // 맨손 데미지
+            default: return 1;
         }
     }
 

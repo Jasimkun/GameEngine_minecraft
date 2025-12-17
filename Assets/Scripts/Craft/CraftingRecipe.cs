@@ -21,6 +21,9 @@ public class CraftingRecipe : ScriptableObject
     }   //°á°ú¹°
 
     public string displayName;
+
+    public Sprite icon;
+
     public List<Ingredient> inputs = new();
     public List<Product> outputs = new();
 }
