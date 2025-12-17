@@ -170,16 +170,21 @@ public class PlayerHarvester : MonoBehaviour
 
     bool CheckIsTool(ItemType type)
     {
-        return type == ItemType.Axe || type == ItemType.Pickaxe || type == ItemType.Sword;
+        return type == ItemType.Axe || type == ItemType.Pickaxe || type == ItemType.Sword || type == ItemType.StoneAxe || type == ItemType.StoneAxe || type == ItemType.StonePickaxe || type == ItemType.StoneSword;
     }
 
     int GetToolDamage(ItemType type)
     {
         switch (type)
         {
-            case ItemType.Sword: return 3;
-            case ItemType.Pickaxe: return 5;
+            case ItemType.Sword: return 2;
+            case ItemType.Pickaxe: return 3;
             case ItemType.Axe: return 2;
+            case ItemType.StoneAxe: return 3;
+            case ItemType.StonePickaxe: return 5;
+            case ItemType.StoneSword: return 4;
+
+
             default: return 1;
         }
     }

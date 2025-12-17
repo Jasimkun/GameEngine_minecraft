@@ -249,6 +249,9 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 7ae6d235ae89e5a4fb017344eda7294d, type: 2}
   - {fileID: 11400000, guid: 6bd983237b788694c904e444b950c1d2, type: 2}
   - {fileID: 11400000, guid: e844e7d9577f90444af5a1a5b563ebc6, type: 2}
+  - {fileID: 11400000, guid: 3991ca7af9cbd934bb61a0361f13525d, type: 2}
+  - {fileID: 11400000, guid: 78fd97cbcad13b5409d8ae6c933d5dc8, type: 2}
+  - {fileID: 11400000, guid: 1d9a2d34484d3fe4da24e6fa7ec47876, type: 2}
   root: {fileID: 165402431}
   plannedText: {fileID: 666671080}
   craftButton: {fileID: 1294039148}
@@ -276,6 +279,9 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 7ae6d235ae89e5a4fb017344eda7294d, type: 2}
   - {fileID: 11400000, guid: 6bd983237b788694c904e444b950c1d2, type: 2}
   - {fileID: 11400000, guid: e844e7d9577f90444af5a1a5b563ebc6, type: 2}
+  - {fileID: 11400000, guid: 3991ca7af9cbd934bb61a0361f13525d, type: 2}
+  - {fileID: 11400000, guid: 78fd97cbcad13b5409d8ae6c933d5dc8, type: 2}
+  - {fileID: 11400000, guid: 1d9a2d34484d3fe4da24e6fa7ec47876, type: 2}
 --- !u!1 &148276593
 GameObject:
   m_ObjectHideFlags: 0
@@ -561,6 +567,9 @@ MonoBehaviour:
   lightSprite: {fileID: 21300000, guid: f6ad8f8c73d8a6a4c947f321b9ad57de, type: 3}
   netherrackSprite: {fileID: 21300000, guid: efbde4cb36464b7429cb5dad36fdb3e4, type: 3}
   endStoneSprite: {fileID: 21300000, guid: b9c3b0646c83cfc439e57059e8b1e42f, type: 3}
+  stoneAxeSprite: {fileID: 21300000, guid: 6d37327365aebc948975d9e9df850a1a, type: 3}
+  stonePickaxeSprite: {fileID: 21300000, guid: b54d9ad0aa7b476439a499cdaf5192b5, type: 3}
+  stoneSwordSprite: {fileID: 21300000, guid: a592a230086da6e4bacf1e52fe5cea36, type: 3}
   Slot:
   - {fileID: 2025853299}
   - {fileID: 1299955790}
@@ -3855,6 +3864,9 @@ MonoBehaviour:
   lightSprite: {fileID: 0}
   netherrackSprite: {fileID: 0}
   endStoneSprite: {fileID: 0}
+  stoneAxeSprite: {fileID: 0}
+  stonePickaxeSprite: {fileID: 0}
+  stoneSwordSprite: {fileID: 0}
   Slot:
   - {fileID: 2025853299}
   - {fileID: 1299955790}
