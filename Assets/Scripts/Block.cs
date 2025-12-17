@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 
-public enum ItemType { Dirt, Grass, Water, Iron, Axe, Sword, Pickaxe, Wood, Stone, Light, Netherrack, Lava, EndStone, StoneAxe, StonePickaxe, StoneSword }
+public enum ItemType { Dirt, Grass, Water, Iron, Axe, Sword, Pickaxe, Wood, Stone, LightPiece, Netherrack, Lava, EndStone, StoneAxe, StonePickaxe, StoneSword, Light }
 
 public class Block : MonoBehaviour
 {

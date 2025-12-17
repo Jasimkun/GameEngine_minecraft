@@ -21,6 +21,10 @@ public class PlayerHarvester : MonoBehaviour
     private InventoryUI invenUI;
     private NoiseVoxelMap voxelMap;
 
+
+    public GameObject lightProjectilePrefab;
+
+
     private void Awake()
     {
         _cam = Camera.main;
@@ -164,6 +168,18 @@ public class PlayerHarvester : MonoBehaviour
                 }
             }
         }
+
+        if (hasItemSelected && currentItemType == ItemType.Light)
+        {
+            // 완성된 '빛'을 들고 우클릭했을 때
+            if (Input.GetMouseButtonDown(1))
+            {
+                if (inventory.Consume(ItemType.Light, 1))
+                {
+                    LaunchLight();
+                }
+            }
+        }
     }
 
     // --- Helper Functions ---
@@ -194,5 +210,16 @@ public class PlayerHarvester : MonoBehaviour
         Vector3 baseCenter = hit.collider.transform.position;
         Vector3 adjCenter = baseCenter + hit.normal;
         return Vector3Int.RoundToInt(adjCenter);
+    }
+
+
+    void LaunchLight()
+    {
+        // 플레이어 앞쪽에 빛 오브젝트 생성
+        Vector3 spawnPos = transform.position + _cam.transform.forward * 1.5f + Vector3.up * 1.5f;
+        GameObject lightObj = Instantiate(lightProjectilePrefab, spawnPos, Quaternion.identity);
+
+        // 인벤토리 UI 알림 활용
+        inventory.ShowNotice("빛이 하늘로 떠오릅니다! 세상이 밝아집니다.");
     }
 }

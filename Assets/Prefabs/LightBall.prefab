@@ -13,9 +13,10 @@ GameObject:
   - component: {fileID: 9030676630140046373}
   - component: {fileID: 1780883469961854064}
   - component: {fileID: 8323198956368367979}
+  - component: {fileID: 3959666132925010897}
   - component: {fileID: 7666313490615096768}
   m_Layer: 0
-  m_Name: LightFragment_Pickup
+  m_Name: LightBall
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -31,7 +32,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 21.330002, z: 12.49}
-  m_LocalScale: {x: 0.25, y: 0.25, z: 0.25}
+  m_LocalScale: {x: 0.8, y: 0.8, z: 0.8}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -114,16 +115,31 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 463055303933667152}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6892709e27639c44991fbd8cade912e3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  itemType: 9
+  itemType: 16
   amount: 1
   pickupRange: 3
   moveSpeed: 10
   pickupDelay: 0.5
+--- !u!114 &3959666132925010897
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 463055303933667152}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9300d3bfabad4fe40aec401f512d8e4d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ascendSpeed: 3
+  daySkybox: {fileID: 2100000, guid: 3e56423e1fe71f94ea97f5bb2004a7e6, type: 2}
+  transitionDuration: 5
 --- !u!54 &7666313490615096768
 Rigidbody:
   m_ObjectHideFlags: 0

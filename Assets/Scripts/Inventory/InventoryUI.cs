@@ -16,12 +16,13 @@ public class InventoryUI : MonoBehaviour
     public Sprite pickaxeSprite;
     public Sprite woodSprite;
     public Sprite stoneSprite;
-    public Sprite lightSprite;
+    public Sprite lightPieceSprite;
     public Sprite netherrackSprite;
     public Sprite endStoneSprite;
     public Sprite stoneAxeSprite;
     public Sprite stonePickaxeSprite;
     public Sprite stoneSwordSprite;
+    public Sprite lightSprite;
 
     public List<Transform> Slot = new List<Transform>();     //내 UI의 각 슬롯들의 리스트
     public GameObject SlotItem;     //슬롯 내부에 들어가는 아이템
@@ -77,8 +78,8 @@ public class InventoryUI : MonoBehaviour
                 case ItemType.Stone:
                     sItem.ItemSetting(stoneSprite, "x" + item.Value.ToString(), item.Key);
                     break;
-                case ItemType.Light:
-                    sItem.ItemSetting(lightSprite, "x" + item.Value.ToString(), item.Key);
+                case ItemType.LightPiece:
+                    sItem.ItemSetting(lightPieceSprite, "x" + item.Value.ToString(), item.Key);
                     break;
                 case ItemType.Netherrack:
                     sItem.ItemSetting(netherrackSprite, "x" + item.Value.ToString(), item.Key);
@@ -94,6 +95,9 @@ public class InventoryUI : MonoBehaviour
                     break;
                 case ItemType.StoneSword:
                     sItem.ItemSetting(stoneSwordSprite, "x" + item.Value.ToString(), item.Key);
+                    break;
+                case ItemType.Light:
+                    sItem.ItemSetting(lightSprite, "x" + item.Value.ToString(), item.Key);
                     break;
             }
             idx++;    //인덱스 한 칸 추가
