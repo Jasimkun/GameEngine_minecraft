@@ -1,20 +1,3 @@
-%YAML 1.1
-%TAG !u! tag:unity3d.com,2011:
---- !u!1045 &1
-EditorBuildSettings:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Scenes:
-  - enabled: 0
-    path: Assets/Scenes/SampleScene.unity
-    guid: 99c9720ab356a0642a771bea13969a05
-  - enabled: 1
-    path: Assets/Scenes/OverWorld.unity
-    guid: 27e97440484c9354f883830ce51a390b
-  - enabled: 1
-    path: Assets/Scenes/Nether.unity
-    guid: 0c3f3662b2388c24c975dc65ec7671fd
-  - enabled: 1
-    path: Assets/Scenes/End.unity
-    guid: 3582ce43f1b391345ab3d84d9de20620
-  m_configObjects: {}
+version https://git-lfs.github.com/spec/v1
+oid sha256:2d0147a0511da60c460aeaba5a64de9b3c81ee3eadc13239d363f3999066892f
+size 542

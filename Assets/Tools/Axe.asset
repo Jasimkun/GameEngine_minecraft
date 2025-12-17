@@ -1,23 +1,3 @@
-%YAML 1.1
-%TAG !u! tag:unity3d.com,2011:
---- !u!114 &11400000
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: aee39894fc7b8c646abaece34df29cf1, type: 3}
-  m_Name: Axe
-  m_EditorClassIdentifier: 
-  displayName: Axe
-  inputs:
-  - type: 0
-    count: 1
-  - type: 7
-    count: 1
-  outputs:
-  - type: 4
-    count: 1
+version https://git-lfs.github.com/spec/v1
+oid sha256:084d5d007305b9fe348e1c6711a8cfe7bc5c27f48e7c87c71a4fabff790b2937
+size 507
