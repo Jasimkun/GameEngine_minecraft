@@ -451,8 +451,16 @@ MonoBehaviour:
     type: 3}
   orePrefab: {fileID: 5792481177299588748, guid: 6cb86c9d8e8b1cf4eb55579c858cbe69,
     type: 3}
-  woodPrefab: {fileID: 0}
-  stonePrefab: {fileID: 0}
+  woodPrefab: {fileID: 5792481177299588748, guid: 6161aac8569e7234e8e1a98b84fcda65,
+    type: 3}
+  stonePrefab: {fileID: 5792481177299588748, guid: 169ffeb6a1d27ca4c8e4e7dc4a0185fe,
+    type: 3}
+  netherrackPrefab: {fileID: 5792481177299588748, guid: 7986327e27c2ff046b3849e9f0a32008,
+    type: 3}
+  lavaPrefab: {fileID: 5792481177299588748, guid: 9b4cec63c9cf47241941220ea70392a1,
+    type: 3}
+  endStonePrefab: {fileID: 5792481177299588748, guid: f251d7fb8bed87647a3671577d8f7964,
+    type: 3}
   viewDistance: 25
   checkInterval: 0.5
   minTrees: 5
@@ -588,7 +596,9 @@ MonoBehaviour:
   pickaxeSprite: {fileID: 0}
   woodSprite: {fileID: 0}
   stoneSprite: {fileID: 0}
-  LightSprite: {fileID: 0}
+  lightSprite: {fileID: 0}
+  netherrackSprite: {fileID: 0}
+  endStoneSprite: {fileID: 0}
   Slot:
   - {fileID: 0}
   - {fileID: 0}

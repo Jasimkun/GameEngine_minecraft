@@ -2,13 +2,13 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
+using UnityEngine.SceneManagement; // 씬 이름 확인용
 
 public class NoiseVoxelMap : MonoBehaviour
 {
     [Header("Map Settings")]
     public int mapID = 0;
     public bool resetMapData = false;
-
     private static bool isSessionInitialized = false;
 
     // 데이터 저장용
@@ -24,14 +24,26 @@ public class NoiseVoxelMap : MonoBehaviour
     public int waterLevel = 4;
     [SerializeField] public float noiseScale = 20f;
 
+    // --- 테마 설정 변수 (자동 설정됨) ---
+    private ItemType currentSurface; // 표면 블록
+    private ItemType currentFill;    // 채움 블록
+    private ItemType currentFluid;   // 액체
+    private bool generateTrees = true;
+    private bool generateStone = true;
+
     // 프리팹 연결
-    [Header("Block Prefabs")]
+    [Header("All Block Prefabs")]
     public GameObject grassPrefab;
     public GameObject dirtPrefab;
     public GameObject waterPrefab;
     public GameObject orePrefab;
     public GameObject woodPrefab;
     public GameObject stonePrefab;
+
+    [Header("Biome Prefabs")]
+    public GameObject netherrackPrefab;
+    public GameObject lavaPrefab;
+    public GameObject endStonePrefab;
 
     [Header("Optimization")]
     public float viewDistance = 25f;
@@ -81,7 +93,45 @@ public class NoiseVoxelMap : MonoBehaviour
             PlayerPrefs.Save();
         }
 
+        // 씬 이름에 따라 바이옴(테마) 설정
+        SetupBiomeByScene();
+
         GenerateMap();
+    }
+
+    // 🌟 씬 이름을 확인해서 테마를 설정하는 함수
+    void SetupBiomeByScene()
+    {
+        string sceneName = SceneManager.GetActiveScene().name;
+        // Debug.Log($"[Map] 현재 씬: {sceneName} / 테마 적용 중...");
+
+        if (sceneName.Contains("Nether")) // 네더 (지옥)
+        {
+            currentSurface = ItemType.Netherrack;
+            currentFill = ItemType.Netherrack;
+            currentFluid = ItemType.Lava;
+            generateTrees = false;
+            generateStone = false; // 돌 생성 안 함
+            waterLevel = 4;
+        }
+        else if (sceneName.Contains("End")) // 엔드 (우주)
+        {
+            currentSurface = ItemType.EndStone;
+            currentFill = ItemType.EndStone;
+            currentFluid = ItemType.Dirt; // 의미 없음 (수위 -10)
+            generateTrees = false;
+            generateStone = false;
+            waterLevel = -10; // 물/용암 없음
+        }
+        else // 기본 (오버월드)
+        {
+            currentSurface = ItemType.Grass;
+            currentFill = ItemType.Dirt;
+            currentFluid = ItemType.Water;
+            generateTrees = true;
+            generateStone = true;
+            // waterLevel은 인스펙터 설정값(4) 따름
+        }
     }
 
     void GenerateMap()
@@ -133,9 +183,10 @@ public class NoiseVoxelMap : MonoBehaviour
                     if (CheckIsDestroyed(x, y, z)) continue;
                     if (IsHidden(x, y, z)) continue;
 
-                    ItemType type = ItemType.Dirt;
-                    if (y == h) type = ItemType.Grass;
-                    else if (h - y >= minDepthForStone) type = ItemType.Stone;
+                    ItemType type = currentFill; // 기본값
+
+                    if (y == h) type = currentSurface; // 표면
+                    else if (generateStone && h - y >= minDepthForStone) type = ItemType.Stone; // 돌 (오버월드만)
 
                     Vector3Int pos = new Vector3Int(x, y, z);
                     if (modifiedBlocks.ContainsKey(pos) && modifiedBlocks[pos] != 0)
@@ -145,11 +196,15 @@ public class NoiseVoxelMap : MonoBehaviour
                     blocksCreatedPerFrame++;
                 }
 
-                for (int y = h + 1; y <= waterLevel; y++)
+                // 액체 생성 (물 or 용암)
+                if (waterLevel > 0)
                 {
-                    if (CheckIsDestroyed(x, y, z)) continue;
-                    SpawnBlockObject(new Vector3Int(x, y, z), ItemType.Water);
-                    blocksCreatedPerFrame++;
+                    for (int y = h + 1; y <= waterLevel; y++)
+                    {
+                        if (CheckIsDestroyed(x, y, z)) continue;
+                        SpawnBlockObject(new Vector3Int(x, y, z), currentFluid);
+                        blocksCreatedPerFrame++;
+                    }
                 }
             }
 
@@ -180,10 +235,11 @@ public class NoiseVoxelMap : MonoBehaviour
         StartCoroutine(OptimizeBlocksRoutine());
     }
 
-    // --- 나무 생성 로직 (데이터 저장 추가됨) ---
     private void PlaceTrees()
     {
+        if (!generateTrees) return; // 테마에 따라 나무 안 만듦
         if (woodPrefab == null) return;
+
         int numberOfTrees = Random.Range(minTrees, maxTrees + 1);
         List<Vector2Int> availablePositions = new List<Vector2Int>(topBlockHeight.Keys);
         List<Vector2Int> safePositions = new List<Vector2Int>();
@@ -214,7 +270,7 @@ public class NoiseVoxelMap : MonoBehaviour
             {
                 Vector3Int treePos = new Vector3Int(x, y, z);
 
-                // 🛠️ [수정] 나무 데이터 저장 (그래야 캘 때 나무가 나옴)
+                // 나무 데이터 저장 (캘 때 나무 나오게)
                 if (!modifiedBlocks.ContainsKey(treePos))
                     modifiedBlocks.Add(treePos, (int)ItemType.Wood);
                 else
@@ -237,24 +293,18 @@ public class NoiseVoxelMap : MonoBehaviour
         if (activeBlocks.ContainsKey(pos)) activeBlocks.Remove(pos);
         UpdateNeighbors(pos);
 
-        // 아이템 드롭 (무조건)
         SpawnBlockDrop(pos, typeToDrop);
     }
 
-    // 블록 프리팹을 작게 만들어서 드롭하는 함수
-    // 블록 프리팹을 작게 만들어서 드롭하는 함수
     void SpawnBlockDrop(Vector3Int pos, ItemType type)
     {
         GameObject prefabToSpawn = GetPrefabByType(type);
         if (prefabToSpawn == null) return;
 
-        // 🌟 [수정됨] 프리팹에 설정된 dropCount(개수)를 미리 읽어옵니다!
+        // 프리팹에서 dropCount 읽기
         int amountToDrop = 1;
         Block originBlockScript = prefabToSpawn.GetComponent<Block>();
-        if (originBlockScript != null)
-        {
-            amountToDrop = originBlockScript.dropCount;
-        }
+        if (originBlockScript != null) amountToDrop = originBlockScript.dropCount;
 
         Vector3 randomOffset = Random.insideUnitSphere * 0.2f;
         Vector3 spawnPos = new Vector3(pos.x, pos.y, pos.z) + Vector3.one * 0.5f + randomOffset;
@@ -272,38 +322,26 @@ public class NoiseVoxelMap : MonoBehaviour
 
         ItemPickup pickup = drop.AddComponent<ItemPickup>();
         pickup.itemType = type;
-
-        // 🌟 [적용] 읽어온 개수를 여기에 대입합니다.
-        pickup.amount = amountToDrop;
-
+        pickup.amount = amountToDrop; // 수정됨
         pickup.pickupRange = 3f;
         pickup.moveSpeed = 10f;
 
         Collider col = drop.GetComponent<Collider>();
         if (col != null) col.isTrigger = false;
 
+        // 플레이어 충돌 무시
+        if (playerTransform != null && col != null)
+        {
+            Collider playerCol = playerTransform.GetComponent<Collider>();
+            if (playerCol == null) playerCol = playerTransform.GetComponent<CharacterController>();
+            if (playerCol != null) Physics.IgnoreCollision(playerCol, col, true);
+        }
+
         Renderer rend = drop.GetComponent<Renderer>();
         if (rend != null)
         {
             rend.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             rend.receiveShadows = false;
-        }
-
-        Collider dropCol = drop.GetComponent<Collider>();
-
-        // playerTransform은 Start 함수에서 이미 찾아뒀음
-        if (playerTransform != null && dropCol != null)
-        {
-            Collider playerCol = playerTransform.GetComponent<Collider>();
-
-            // 만약 플레이어에 Collider가 없고 CharacterController가 있다면 이걸로 가져옴
-            if (playerCol == null) playerCol = playerTransform.GetComponent<CharacterController>();
-
-            if (playerCol != null)
-            {
-                // "이 아이템과 플레이어는 서로 물리적으로 무시해라!"
-                Physics.IgnoreCollision(playerCol, dropCol, true);
-            }
         }
     }
 
@@ -320,14 +358,15 @@ public class NoiseVoxelMap : MonoBehaviour
         if (blockScript != null) Destroy(blockScript);
         drop.transform.localScale = Vector3.one * 0.25f;
 
-        Rigidbody rb = drop.AddComponent<Rigidbody>();
+        Rigidbody rb = drop.GetComponent<Rigidbody>();
+        if (rb == null) rb = drop.AddComponent<Rigidbody>();
         rb.mass = 1f;
         rb.drag = 0.5f;
 
         ItemPickup pickup = drop.AddComponent<ItemPickup>();
         pickup.itemType = type;
         pickup.amount = count;
-        pickup.pickupDelay = 1.0f; // 1초간 획득 불가
+        pickup.pickupDelay = 1.0f;
         pickup.pickupRange = 3f;
         pickup.moveSpeed = 10f;
 
@@ -338,6 +377,7 @@ public class NoiseVoxelMap : MonoBehaviour
         if (playerTransform != null && dropCol != null)
         {
             Collider playerCol = playerTransform.GetComponent<Collider>();
+            if (playerCol == null) playerCol = playerTransform.GetComponent<CharacterController>();
             if (playerCol != null) Physics.IgnoreCollision(playerCol, dropCol, true);
         }
 
@@ -397,11 +437,11 @@ public class NoiseVoxelMap : MonoBehaviour
 
         if (topBlockHeight.TryGetValue(new Vector2Int(x, z), out int h))
         {
-            if (y == h) return ItemType.Grass;
-            if (h - y >= minDepthForStone) return ItemType.Stone;
-            return ItemType.Dirt;
+            if (y == h) return currentSurface; // 테마 적용
+            if (generateStone && h - y >= minDepthForStone) return ItemType.Stone;
+            return currentFill; // 테마 적용
         }
-        return ItemType.Dirt;
+        return currentFill;
     }
 
     GameObject GetPrefabByType(ItemType type)
@@ -410,10 +450,16 @@ public class NoiseVoxelMap : MonoBehaviour
         {
             case ItemType.Dirt: return dirtPrefab;
             case ItemType.Grass: return grassPrefab;
-            case ItemType.Water: return null;
+            case ItemType.Water: return waterPrefab;
             case ItemType.Stone: return stonePrefab;
             case ItemType.Wood: return woodPrefab;
             case ItemType.Iron: return orePrefab;
+
+            // 바이옴 전용 블록
+            case ItemType.Netherrack: return netherrackPrefab;
+            case ItemType.Lava: return lavaPrefab;
+            case ItemType.EndStone: return endStonePrefab;
+
             default: return null;
         }
     }
@@ -438,7 +484,7 @@ public class NoiseVoxelMap : MonoBehaviour
     {
         if (activeBlocks.ContainsKey(pos)) return;
         GameObject prefab = GetPrefabByType(type);
-        if (type == ItemType.Water) prefab = waterPrefab; // 물 예외 처리
+        if (type == ItemType.Water || type == ItemType.Lava) prefab = GetPrefabByType(type);
 
         if (prefab != null)
         {
@@ -456,6 +502,8 @@ public class NoiseVoxelMap : MonoBehaviour
         int targetY = maxHeight + 5;
         Vector2Int centerPos = new Vector2Int(centerX, centerZ);
         if (topBlockHeight.ContainsKey(centerPos)) targetY = topBlockHeight[centerPos] + 2;
+
+        // 용암/물보다 위에서 시작하도록
         if (targetY <= waterLevel) targetY = waterLevel + 2;
 
         playerTransform.position = new Vector3(centerX, targetY, centerZ);
