@@ -84,7 +84,7 @@ public class PlayerHarvester : MonoBehaviour
                     var enemy = hit.collider.GetComponent<Enemy>();
                     if (enemy != null)
                     {
-                        enemy.TakeDamage(damage);
+                        enemy.TakeDamage(damage, transform.position);
                         return; // 적을 공격했으면 다른 로직을 건너뜁니다.
                     }
                     // ======================================

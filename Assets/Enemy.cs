@@ -14,15 +14,19 @@ public class Enemy : MonoBehaviour
     public float traceRange = 15f;
     public float suicideRange = 3f;
 
+    // === 넉백 설정 (추가됨) ===
+    [Header("Knockback Settings")]
+    public float knockbackForce = 5f; // 밀려나는 힘
+    public float knockbackDuration = 0.3f; // 밀려나는 시간 (스턴 시간)
+
     // === 자폭 및 경고 설정 ===
     public float suicideDelay = 3f;
     public float explosionRadius = 3f;
     public Color warningColor = Color.white;
     public int baseExplosionDamage = 10;
 
-    // 💡 [추가] 블록 파괴 범위 설정 (3x3x3 큐브를 위해 반지름 1 설정)
     [Header("Block Destruction")]
-    public int blockExplosionRadius = 1; // 1이면 3x3x3 범위 (중앙 포함)
+    public int blockExplosionRadius = 1;
 
     // === 자폭 연출 변수 ===
     public float blinkInterval = 0.2f;
@@ -39,7 +43,6 @@ public class Enemy : MonoBehaviour
     public int baseMaxHP = 10;
     public int currentHP;
 
-    // === 최종 스탯 및 도주 기준 ===
     private int calculatedMaxHP;
     private int calculatedDamage;
     private const float RUN_AWAY_HP_PERCENT = 0.2f;
@@ -50,7 +53,6 @@ public class Enemy : MonoBehaviour
     private Renderer enemyRenderer;
     private Color originalColor;
     private Rigidbody enemyRigidbody;
-
 
     void Start()
     {
@@ -72,8 +74,12 @@ public class Enemy : MonoBehaviour
         {
             enemyRigidbody = gameObject.AddComponent<Rigidbody>();
         }
+
+        // 평소에는 물리 연산을 꺼둡니다 (직접 이동 제어 위함)
         enemyRigidbody.isKinematic = true;
         enemyRigidbody.useGravity = false;
+        // 충돌은 하되 회전해서 넘어지지 않도록 설정
+        enemyRigidbody.constraints = RigidbodyConstraints.FreezeRotation;
 
         if (enemyRenderer != null)
         {
@@ -86,7 +92,10 @@ public class Enemy : MonoBehaviour
     void Update()
     {
         if (player == null) return;
+
+        // 넉백 중(isKinematic이 false일 때)에는 AI 이동 로직을 멈춥니다.
         if (enemyRigidbody != null && !enemyRigidbody.isKinematic) return;
+
         if (state == EnemyState.Suicide) return;
 
         float dist = Vector3.Distance(player.position, transform.position);
@@ -115,24 +124,61 @@ public class Enemy : MonoBehaviour
         }
     }
 
-    public void TakeDamage(int damage)
+    // [수정됨] 데미지와 함께 때린 사람의 위치(attackerPos)를 받습니다.
+    // 만약 위치를 모르면 null을 넣으세요.
+    public void TakeDamage(int damage, Vector3? attackerPos = null)
     {
         if (currentHP <= 0) return;
 
+        // 깜빡임 효과
         if (blinkCoroutine != null) StopCoroutine(blinkCoroutine);
         blinkCoroutine = StartCoroutine(BlinkEffect());
 
+        // 체력 감소
         currentHP -= damage;
+        if (hpSlider != null) hpSlider.value = currentHP;
 
-        if (hpSlider != null)
+        // 넉백 실행 (공격자가 있을 경우에만)
+        if (attackerPos.HasValue && currentHP > 0)
         {
-            hpSlider.value = currentHP;
+            StopCoroutine("KnockbackRoutine"); // 이미 넉백 중이라면 끊고 새로 시작
+            StartCoroutine(KnockbackRoutine(attackerPos.Value));
         }
 
         if (currentHP <= 0)
         {
             Die();
         }
+    }
+
+    // [추가됨] 넉백 코루틴
+    IEnumerator KnockbackRoutine(Vector3 attackerPos)
+    {
+        // 1. 밀려날 방향 계산 (내 위치 - 공격자 위치)
+        Vector3 knockbackDir = (transform.position - attackerPos).normalized;
+
+        // 2. 약간 위로 튀어 오르게 설정 (마인크래프트 느낌)
+        knockbackDir += Vector3.up * 0.5f;
+        knockbackDir.Normalize();
+
+        // 3. 물리 엔진 활성화
+        enemyRigidbody.isKinematic = false;
+        enemyRigidbody.useGravity = true;
+        enemyRigidbody.velocity = Vector3.zero; // 기존 속도 초기화
+
+        // 4. 힘 가하기 (Impulse는 순간적인 힘)
+        enemyRigidbody.AddForce(knockbackDir * knockbackForce, ForceMode.Impulse);
+
+        // 5. 넉백 시간만큼 대기 (이 동안은 Update에서 이동 로직이 멈춤)
+        yield return new WaitForSeconds(knockbackDuration);
+
+        // 6. 물리 엔진 비활성화 및 상태 복구
+        enemyRigidbody.velocity = Vector3.zero;
+        enemyRigidbody.isKinematic = true;
+        enemyRigidbody.useGravity = false;
+
+        // 7. 공중에 떠있지 않도록 바닥으로 붙이기
+        SnapToGround();
     }
 
     private IEnumerator BlinkEffect()
@@ -201,8 +247,9 @@ public class Enemy : MonoBehaviour
     void SnapToGround()
     {
         RaycastHit hit;
-        if (Physics.Raycast(transform.position + Vector3.up * 0.1f, Vector3.down, out hit, groundCheckDistance))
+        if (Physics.Raycast(transform.position + Vector3.up * 0.5f, Vector3.down, out hit, groundCheckDistance + 1f))
         {
+            // 부드러운 이동을 위해 위치 보정 (넉백 직후 너무 딱딱하게 붙지 않도록)
             transform.position = new Vector3(transform.position.x, hit.point.y + groundOffset, transform.position.z);
         }
     }
@@ -247,7 +294,6 @@ public class Enemy : MonoBehaviour
     {
         Vector3 explosionCenter = transform.position;
 
-        // 1. 플레이어에게 데미지 적용
         Collider[] hitColliders = Physics.OverlapSphere(explosionCenter, explosionRadius);
         foreach (var hitCollider in hitColliders)
         {
@@ -261,7 +307,6 @@ public class Enemy : MonoBehaviour
             }
         }
 
-        // 2. 💡 [추가된 로직] 주변 블록 파괴
         Vector3Int centerPos = Vector3Int.RoundToInt(explosionCenter);
         int radius = blockExplosionRadius;
 
@@ -272,24 +317,15 @@ public class Enemy : MonoBehaviour
                 for (int z = -radius; z <= radius; z++)
                 {
                     Vector3 targetPos = centerPos + new Vector3Int(x, y, z);
-
-                    // 해당 위치에 있는 블록을 찾음
-                    // Physics.OverlapSphere 대신 Physics.OverlapBox를 사용하거나 
-                    // Physics.OverlapSphere를 사용하되, 블록 레이어만 체크하는 것이 더 효율적일 수 있습니다.
-
-                    // Simple Raycast/Overlap 대신, Voxel 맵 구조를 이용해 해당 좌표의 Collider를 검색합니다.
                     Collider[] blockCheck = Physics.OverlapBox(targetPos, Vector3.one * 0.45f, Quaternion.identity, LayerMask.GetMask("Block") != 0 ? LayerMask.GetMask("Block") : ~0);
 
                     foreach (Collider col in blockCheck)
                     {
-                        // 태그로 한 번 더 확인하여 Block 컴포넌트를 가져옴
                         if (col.CompareTag("Block"))
                         {
                             Block block = col.GetComponent<Block>();
                             if (block != null)
                             {
-                                // Block.Hit 함수를 사용하여 파괴 (인벤토리 추가 방지 위해 null 전달)
-                                // 데미지는 블록을 한 번에 파괴할 수 있는 큰 값으로 설정
                                 block.Hit(block.maxHP + 1, null);
                             }
                         }
@@ -297,12 +333,6 @@ public class Enemy : MonoBehaviour
                 }
             }
         }
-
         Die();
     }
-
-    //private void OnTriggerEnter(Collider other)
-    //{
-    //    if (other.CompareTag("DeadZone")) Die();
-    //}
 }
