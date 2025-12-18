@@ -1,26 +1,45 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 public class EnemyLoot : MonoBehaviour
 {
-    [Header("µå·Ó ¼³Á¤")]
-    public GameObject itemPrefab;   // µå·ÓÇÒ ¾ÆÀÌÅÛ ÇÁ¸®ÆÕ (À§ÀÇ ItemPickupÀÌ ºÙÀº °Í)
-    public ItemType itemType;       // µå·ÓÇÒ ¾ÆÀÌÅÛ Á¾·ù (¿¹: LightFragment)
+    [Header("ë“œë¡­ ì„¤ì •")]
+    public GameObject itemPrefab;
+    public ItemType itemType;
 
     [Range(0, 100)]
-    public float dropChance = 10f;  // È®·ü (10% µî)
+    public float dropChance = 10f;  // ê¸°ë³¸ í™•ë¥ 
 
-    public int minAmount = 1;       // ÃÖ¼Ò °³¼ö
-    public int maxAmount = 1;       // ÃÖ´ë °³¼ö
+    public int minAmount = 1;
+    public int maxAmount = 1;
 
-    // ÀûÀÌ Á×´Â ¼ø°£ ÀÌ ÇÔ¼ö¸¦ È£ÃâÇÏ¼¼¿ä!
+    // ğŸ”» [ì¶”ê°€] ì¹˜íŠ¸í‚¤ ê°ì§€ë¥¼ ìœ„í•œ Update í•¨ìˆ˜
+    void Update()
+    {
+        // í‚¤ë³´ë“œ Oí‚¤ë¥¼ ëˆŒë €ì„ ë•Œ (GetKeyDownì€ í•œ ë²ˆ ëˆ„ë¥¼ ë•Œ í•œ ë²ˆ ì‹¤í–‰)
+        if (Input.GetKeyDown(KeyCode.O))
+        {
+            IncreaseDropChance(10f);
+        }
+    }
+
+    // ğŸ”» [ì¶”ê°€] í™•ë¥  ì¦ê°€ í•¨ìˆ˜
+    void IncreaseDropChance(float amount)
+    {
+        dropChance += amount;
+
+        // í™•ë¥ ì´ 100%ë¥¼ ë„˜ì§€ ì•Šë„ë¡ ì œí•œ
+        if (dropChance > 100f) dropChance = 100f;
+
+        Debug.Log($"<color=yellow>[ì¹˜íŠ¸]</color> ì•„ì´í…œ ë“œë¡­ í™•ë¥ ì´ ìƒìŠ¹í–ˆìŠµë‹ˆë‹¤! í˜„ì¬ í™•ë¥ : {dropChance}%");
+    }
+
+    // ì ì´ ì£½ëŠ” ìˆœê°„ í˜¸ì¶œ (ê¸°ì¡´ ë¡œì§ ë™ì¼)
     public void TryDropLoot()
     {
-        // 1. È®·ü °è»ê (0~100 »çÀÌ ·£´ı ¼ıÀÚ°¡ È®·üº¸´Ù ³·À¸¸é ´çÃ·)
         float randomValue = Random.Range(0f, 100f);
 
         if (randomValue <= dropChance)
         {
-            // 2. ´çÃ·! ¾ÆÀÌÅÛ »ı¼º
             SpawnItem();
         }
     }
@@ -29,15 +48,11 @@ public class EnemyLoot : MonoBehaviour
     {
         if (itemPrefab == null) return;
 
-        // °³¼ö ·£´ı °áÁ¤ (º¸Åë 1°³°ÚÁö¸¸)
         int count = Random.Range(minAmount, maxAmount + 1);
-
-        // ¾ÆÀÌÅÛ »ı¼º À§Ä¡ (ÀûÀÇ À§Ä¡º¸´Ù »ìÂ¦ À§)
         Vector3 spawnPos = transform.position + Vector3.up * 1.0f;
 
         GameObject droppedItem = Instantiate(itemPrefab, spawnPos, Quaternion.identity);
 
-        // »ı¼ºµÈ ¾ÆÀÌÅÛ¿¡ Á¤º¸ ÀÔ·Â
         ItemPickup pickupScript = droppedItem.GetComponent<ItemPickup>();
         if (pickupScript != null)
         {
