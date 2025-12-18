@@ -1,9 +1,14 @@
-using System.Collections;
+ï»¿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement; // ì£½ì—ˆì„ ë•Œ ì”¬ ì¬ì‹œì‘ìš©
 
 public class PlayerController2 : MonoBehaviour
 {
+    [Header("Health Settings")]
+    public int maxHP = 20;
+    public int currentHP;
+    private bool isDead = false;
 
     [Header("Movement Settings")]
     public float moveSpeed = 5f;
@@ -11,8 +16,8 @@ public class PlayerController2 : MonoBehaviour
     public float gravity = -9.81f;
     public float mouseSensitivity = 3f;
 
-    [Header("Light Settings")] 
-    public Light playerLight; 
+    [Header("Light Settings")]
+    public Light playerLight;
     public bool isLightOn = true;
 
     Animator anim;
@@ -24,6 +29,9 @@ public class PlayerController2 : MonoBehaviour
     bool isGrounded;
 
     private bool isCursorLocked = true;
+
+    // ì§€ì† ë°ë¯¸ì§€ ì½”ë£¨í‹´ ì¤‘ë³µ ë°©ì§€ìš©
+    private Coroutine dotCoroutine;
 
     void Awake()
     {
@@ -42,6 +50,7 @@ public class PlayerController2 : MonoBehaviour
     private void Start()
     {
         anim = GetComponent<Animator>();
+        currentHP = maxHP; // ì²´ë ¥ ì´ˆê¸°í™”
 
         if (playerLight != null)
         {
@@ -49,27 +58,82 @@ public class PlayerController2 : MonoBehaviour
         }
     }
 
-    // Update is called once per frame
     void Update()
     {
+        if (isDead) return; // ì£½ìœ¼ë©´ ì¡°ì‘ ë¶ˆê°€
+
         HandleCursorLock();
         HandleMove();
         HandleLook();
-
         HandleLight();
+
+        // ì• ë‹ˆë©”ì´ì…˜ (ControllPlayer ë¡œì§ í†µí•©)
+        UpdateAnimation();
     }
+
+    // === ğŸ”» [ì¶”ê°€] ë°ë¯¸ì§€ ì²˜ë¦¬ ë¡œì§ ===
+    public void TakeDamage(int damage)
+    {
+        if (isDead) return;
+
+        currentHP -= damage;
+        Debug.Log($"Player HP: {currentHP}");
+
+        // ì—¬ê¸°ì— í”¼ê²© íš¨ê³¼ìŒì´ë‚˜ í™”ë©´ ë¶‰ì–´ì§ íš¨ê³¼ë¥¼ ë„£ì„ ìˆ˜ ìˆìŠµë‹ˆë‹¤.
+
+        if (currentHP <= 0)
+        {
+            Die();
+        }
+    }
+
+    // === ğŸ”» [ì¶”ê°€] ì§€ì† ë°ë¯¸ì§€(DoT) ë¡œì§ ===
+    public void StartDamageOverTime(int damagePerTick, float duration, float interval)
+    {
+        if (dotCoroutine != null) StopCoroutine(dotCoroutine);
+        dotCoroutine = StartCoroutine(DoTRoutine(damagePerTick, duration, interval));
+    }
+
+    IEnumerator DoTRoutine(int damage, float duration, float interval)
+    {
+        float timer = 0f;
+        while (timer < duration && !isDead)
+        {
+            yield return new WaitForSeconds(interval);
+            TakeDamage(damage);
+            timer += interval;
+        }
+        dotCoroutine = null;
+    }
+
+    void Die()
+    {
+        isDead = true;
+        Debug.Log("Player Died!");
+
+        // ì»¤ì„œ ì ê¸ˆ í•´ì œ
+        SetCursorLock(false);
+
+        // ì˜ˆì‹œ: í˜„ì¬ ì”¬ ì¬ì‹œì‘ (ì›í•˜ëŠ” ë¡œì§ìœ¼ë¡œ ë³€ê²½ ê°€ëŠ¥)
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+    // ==================================
 
     void HandleMove()
     {
         isGrounded = controller.isGrounded;
         if (isGrounded && velocity.y < 0)
             velocity.y = -2f;
+
         float h = Input.GetAxis("Horizontal");
         float v = Input.GetAxis("Vertical");
+
         Vector3 move = transform.right * h + transform.forward * v;
         controller.Move(move * moveSpeed * Time.deltaTime);
+
         if (Input.GetButtonDown("Jump") && isGrounded)
             velocity.y = Mathf.Sqrt(jumpPower * -2f * gravity);
+
         velocity.y += gravity * Time.deltaTime;
         controller.Move(velocity * Time.deltaTime);
     }
@@ -78,22 +142,23 @@ public class PlayerController2 : MonoBehaviour
     {
         float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
         float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
+
         transform.Rotate(Vector3.up * mouseX);
+
         xRotation -= mouseY;
         xRotation = Mathf.Clamp(xRotation, -80f, 80f);
+
         if (cam != null)
             cam.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
     }
 
     private void HandleCursorLock()
     {
-        // 1. ESC Å°¸¦ ´©¸£¸é Ä¿¼­ ÇØÁ¦
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             SetCursorLock(false);
         }
-        // 2. Ä¿¼­°¡ ÇØÁ¦µÈ »óÅÂ¿¡¼­ ¸¶¿ì½º ¿ŞÂÊ ¹öÆ°(GetMouseButtonDown(0) ´ë½Å ¸¶¿ì½º ¹öÆ° ÀÏ¹İ »ç¿ë)À» Å¬¸¯ÇÏ¸é ´Ù½Ã Àá±İ
-        else if (!isCursorLocked && (Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Escape)))
+        else if (!isCursorLocked && (Input.GetMouseButtonDown(0)))
         {
             SetCursorLock(true);
         }
@@ -102,48 +167,40 @@ public class PlayerController2 : MonoBehaviour
     private void SetCursorLock(bool lockState)
     {
         isCursorLocked = lockState;
-
         if (lockState)
         {
-            // Ä¿¼­ Àá±İ ¹× ¼û±â±â (°ÔÀÓ ÇÃ·¹ÀÌ ¸ğµå)
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
         }
         else
         {
-            // Ä¿¼­ ÇØÁ¦ ¹× º¸ÀÌ±â (UI ¸Ş´º ¶Ç´Â ÀÏ½Ã Á¤Áö ¸ğµå)
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
         }
     }
 
-    void ControllPlayer()
+    void UpdateAnimation()
     {
+        if (anim == null) return;
+
         float moveHorizontal = Input.GetAxisRaw("Horizontal");
         float moveVertical = Input.GetAxisRaw("Vertical");
 
-        Vector3 movement = new Vector3(moveHorizontal, 0.0f, moveVertical);
-
-        if (movement != Vector3.zero)
+        if (moveHorizontal != 0 || moveVertical != 0)
         {
-            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(movement), 0.15f);
             anim.SetInteger("Walk", 1);
         }
         else
         {
             anim.SetInteger("Walk", 0);
         }
-
-        transform.Translate(movement * moveSpeed * Time.deltaTime, Space.World);
     }
 
     void HandleLight()
     {
-        // F Å°¸¦ ´©¸£¸é Åä±Û
         if (Input.GetKeyDown(KeyCode.F))
         {
             isLightOn = !isLightOn;
-
             if (playerLight != null)
             {
                 playerLight.enabled = isLightOn;

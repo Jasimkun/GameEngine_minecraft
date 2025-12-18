@@ -1,77 +1,85 @@
-using UnityEngine;
-using UnityEngine.UI; // ½½¶óÀÌ´õ(UI)¸¦ Á¦¾îÇÏ±â À§ÇØ ÇÊ¼ö!
+ï»¿using UnityEngine;
+using UnityEngine.UI;
 
 public class PlayerLightHealth : MonoBehaviour
 {
     [Header("Health Stats")]
-    public float maxHealth = 100f;  // ÃÖ´ë Ã¼·Â
-    public float currentHealth;     // ÇöÀç Ã¼·Â
+    public float maxHealth = 100f;
+    public float currentHealth;
 
     [Header("Light Settings")]
-    public Light playerLight;       // ÇÃ·¹ÀÌ¾î ÁÖº¯À» ¹àÈ÷´Â Point Light
-    public float maxIntensity = 10f; // Ã¼·ÂÀÌ ²Ë Ã¡À» ¶§ÀÇ ºû ¹à±â (±âº» 10)
+    public Light playerLight;
+    public float maxIntensity = 10f;
 
     [Header("UI Settings")]
-    public Slider healthSlider;     // ºû °ÔÀÌÁö ½½¶óÀÌ´õ
+    public Slider healthSlider;
+
+    // ğŸ”» [ì¶”ê°€] ì§€ì† ë°ë¯¸ì§€ ì¤‘ë³µ ë°©ì§€ìš© ì½”ë£¨í‹´ ë³€ìˆ˜
+    private Coroutine dotCoroutine;
 
     void Start()
     {
-        // 1. °ÔÀÓ ½ÃÀÛ ½Ã Ã¼·Â ÃÊ±âÈ­
         currentHealth = maxHealth;
 
-        // 2. ½½¶óÀÌ´õ ÃÖ´ë°ª ¼³Á¤
         if (healthSlider != null)
         {
             healthSlider.maxValue = maxHealth;
             healthSlider.value = currentHealth;
         }
 
-        // 3. ºû ¹à±â ÃÊ±âÈ­
         UpdateLightVisuals();
     }
 
-    // ¿ÜºÎ(Àû, ÇÔÁ¤ µî)¿¡¼­ ÀÌ ÇÔ¼ö¸¦ È£ÃâÇØ¼­ µ¥¹ÌÁö¸¦ ÁÜ
     public void TakeDamage(float damage)
     {
-        // Ã¼·Â °¨¼Ò
         currentHealth -= damage;
-
-        // Ã¼·ÂÀÌ 0 ¹ØÀ¸·Î ³»·Á°¡Áö ¾Ê°Ô °íÁ¤
         if (currentHealth < 0) currentHealth = 0;
 
-        // ½Ã°¢ È¿°ú ¾÷µ¥ÀÌÆ® (ºû & ½½¶óÀÌ´õ)
         UpdateLightVisuals();
 
-        // »ç¸Á Ã¼Å©
         if (currentHealth <= 0)
         {
             Die();
         }
     }
 
-    // Èú¸µ ±â´É (ÇÊ¿äÇÒ °Í °°¾Æ¼­ Ãß°¡!)
+    // ğŸ”» [ì¶”ê°€] ì§€ì† ë°ë¯¸ì§€(DoT) ì‹œì‘ í•¨ìˆ˜
+    public void StartDamageOverTime(float damagePerTick, float duration, float interval)
+    {
+        // ì´ë¯¸ ë¶ˆíƒ€ê³  ìˆë‹¤ë©´ ê¸°ì¡´ ë¶ˆì„ ë„ê³  ìƒˆë¡œ ë¶™ì„ (ì„ íƒ ì‚¬í•­)
+        if (dotCoroutine != null) StopCoroutine(dotCoroutine);
+        dotCoroutine = StartCoroutine(DoTRoutine(damagePerTick, duration, interval));
+    }
+
+    // ğŸ”» [ì¶”ê°€] ì§€ì† ë°ë¯¸ì§€ ì½”ë£¨í‹´
+    System.Collections.IEnumerator DoTRoutine(float damage, float duration, float interval)
+    {
+        float timer = 0f;
+        while (timer < duration && currentHealth > 0)
+        {
+            yield return new WaitForSeconds(interval);
+            TakeDamage(damage); // í‹±ë‹¹ ë°ë¯¸ì§€ ì ìš©
+            timer += interval;
+        }
+        dotCoroutine = null;
+    }
+
     public void Heal(float amount)
     {
         currentHealth += amount;
         if (currentHealth > maxHealth) currentHealth = maxHealth;
-
         UpdateLightVisuals();
     }
 
     void UpdateLightVisuals()
     {
-        // ÇÙ½É ·ÎÁ÷: ÇöÀç Ã¼·ÂÀÌ ¸î ÆÛ¼¾Æ® ³²¾Ò´ÂÁö °è»ê (0.0 ~ 1.0)
         float healthRatio = currentHealth / maxHealth;
 
-        // 1. Light Intensity Á¶Àı
         if (playerLight != null)
         {
-            // ÃÖ´ë ¹à±â(10) * ³²ÀººñÀ²
-            // ¿¹: Ã¼·Â 50% ³²À½ -> 10 * 0.5 = 5 (¹à±â ¹İÅä¸·)
             playerLight.intensity = maxIntensity * healthRatio;
         }
 
-        // 2. UI ½½¶óÀÌ´õ Á¶Àı
         if (healthSlider != null)
         {
             healthSlider.value = currentHealth;
@@ -80,19 +88,9 @@ public class PlayerLightHealth : MonoBehaviour
 
     void Die()
     {
-        Debug.Log("ÇÃ·¹ÀÌ¾î »ç¸Á! ºûÀÌ ¼Ò¸êÇß½À´Ï´Ù.");
-        // ¿©±â¿¡ °ÔÀÓ ¿À¹ö È­¸éÀ» ¶ç¿ì°Å³ª Àç½ÃÀÛ ·ÎÁ÷À» ³ÖÀ¸¸é µÊ
-
-        // (¼±ÅÃ»çÇ×) »ç¸Á ½Ã ºûÀ» ¿ÏÀüÈ÷ ²¨¹ö¸®±â
+        Debug.Log("í”Œë ˆì´ì–´ ì‚¬ë§! ë¹›ì´ ì†Œë©¸í–ˆìŠµë‹ˆë‹¤.");
         if (playerLight != null) playerLight.intensity = 0;
-    }
 
-    // Å×½ºÆ®¿ë: ½ºÆäÀÌ½º¹Ù¸¦ ´©¸£¸é µ¥¹ÌÁö¸¦ ÀÔÀ½
-    void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.P))
-        {
-            TakeDamage(10); // 10¾¿ µ¥¹ÌÁö Å×½ºÆ®
-        }
+        // ì—¬ê¸°ì— ê²Œì„ì˜¤ë²„ UIë‚˜ ì”¬ ì¬ì‹œì‘ ë¡œì§ ì¶”ê°€
     }
 }
