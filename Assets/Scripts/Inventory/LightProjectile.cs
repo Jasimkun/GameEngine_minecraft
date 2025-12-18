@@ -1,27 +1,53 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using System.Collections;
+using UnityEngine.Rendering; // AmbientMode ì ‘ê·¼ì„ ìœ„í•´ ì¶”ê°€
 
 public class LightProjectile : MonoBehaviour
 {
-    [Header("¼³Á¤")]
-    public float ascendSpeed = 3f;
-    public Material daySkybox; // ¿©±â¿¡ SkyNoon ¸ÓÆ¼¸®¾óÀ» µå·¡±×ÇØ¼­ ³ÖÀ¸¼¼¿ä.
-    public float transitionDuration = 5f;
+    [Header("ğŸš€ ì†ë„ ì„¤ì •")]
+    public float ascendSpeed = 40f;
+    public float riseTime = 1.5f;
+
+    [Header("ì—°ì¶œ ì—°ê²°")]
+    public Material daySkybox;
+    public float transitionDuration = 3f;
 
     private Light mainSun;
+    private Rigidbody rb;
+
+    // ğŸ’¾ ê¸°ì¡´ ì•ˆê°œ ê±°ë¦¬ ì„¤ì •ë§Œ ì €ì¥ (ìƒ‰ê¹”ì€ ì €ì¥ ì•ˆ í•¨ -> ë‚®ì—ëŠ” ë°ì€ ì•ˆê°œì—¬ì•¼ í•˜ë‹ˆê¹Œ)
+    private FogMode originalFogMode;
+    private float originalFogStart;
+    private float originalFogEnd;
+    private bool originalFogEnabled;
 
     void Start()
     {
-        // Directional Light Ã£±â
-        mainSun = GameObject.FindWithTag("MainLight")?.GetComponent<Light>();
+        // 1. íƒœì–‘ ì°¾ê¸°
+        GameObject lightObj = GameObject.FindWithTag("MainLight");
+        if (lightObj != null)
+            mainSun = lightObj.GetComponent<Light>();
 
-        // 4ÃÊ ÈÄ »ó½Â Á¤Á¡ ¹× Æø¹ß ¿¬Ãâ ½ÃÀÛ
-        Invoke("TheGreatAwakening", 4f);
+        // 2. ë¬¼ë¦¬ ë„ê¸°
+        rb = GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.useGravity = false;
+            rb.velocity = Vector3.zero;
+        }
+
+        // 3. ë ‰ ë°©ì§€ìš© ì•ˆê°œ ê±°ë¦¬(Linear, 15~22)ë§Œ ê¸°ì–µí•˜ê¸°
+        originalFogEnabled = RenderSettings.fog;
+        originalFogMode = RenderSettings.fogMode;
+        originalFogStart = RenderSettings.fogStartDistance;
+        originalFogEnd = RenderSettings.fogEndDistance;
+
+        // 4. ìƒìŠ¹ ì‹œì‘
+        Invoke("TheGreatAwakening", riseTime);
     }
 
     void Update()
     {
-        // ÇÏ´Ã·Î ÃµÃµÈ÷ »ó½Â
         transform.Translate(Vector3.up * ascendSpeed * Time.deltaTime);
     }
 
@@ -34,50 +60,93 @@ public class LightProjectile : MonoBehaviour
     {
         float elapsed = 0f;
 
-        // 1. ¾ÆÁÖ¾ÆÁÖ ¹à¾ÆÁö´Â ´Ü°è (White Out È¿°ú ÁØºñ)
+        // --- 1ë‹¨ê³„: í™”ì´íŠ¸ ì•„ì›ƒ (White Out) ---
+
+        // ì•ˆê°œ ì„¤ì •: í™”ë©´ì„ ë®ê¸° ìœ„í•œ ì„ì‹œ ì„¤ì •
+        RenderSettings.fog = true;
+        RenderSettings.fogMode = FogMode.ExponentialSquared;
+        RenderSettings.fogColor = Color.white; // ì•ˆê°œë¥¼ í•˜ì–—ê²Œ!
+
+        // í™˜ê²½ê´‘(Ambient) ëª¨ë“œë¥¼ 'Color'ë¡œ ë³€ê²½í•´ì•¼ ìƒ‰ìƒ ë³€ê²½ì´ í™•ì‹¤í•˜ê²Œ ë¨¹í˜
+        RenderSettings.ambientMode = AmbientMode.Flat;
+
         while (elapsed < transitionDuration)
         {
             elapsed += Time.deltaTime;
             float t = elapsed / transitionDuration;
 
-            // ÇØ °­µµ Æø¹ßÀû Áõ°¡ (¾ÆÁÖ ¹à°Ô!)
+            // 1. ì•ˆê°œ ë°€ë„ ë†’ì´ê¸° (í™”ë©´ í•˜ì–—ê²Œ)
+            RenderSettings.fogDensity = Mathf.Lerp(0f, 1.0f, t);
+
+            // 2. âœ¨ íƒœì–‘ ë¹›: í•˜ì–—ê²Œ + ì—„ì²­ ë°ê²Œ(í”Œë˜ì‹œ íš¨ê³¼)
             if (mainSun != null)
-                mainSun.intensity = Mathf.Lerp(0.1f, 8.0f, t);
+            {
+                mainSun.color = Color.Lerp(mainSun.color, Color.white, t); // ìƒ‰ìƒì„ í•˜ì–—ê²Œ
+                mainSun.intensity = Mathf.Lerp(1.0f, 8.0f, t); // ë°ê¸° í­ë°œ
+            }
 
-            // ÇöÀç ½ºÄ«ÀÌ¹Ú½º ³ëÃâµµ ÃÖ´ëÄ¡·Î (È­¸éÀ» ÇÏ¾é°Ô Ã¤¿ò)
-            RenderSettings.skybox.SetFloat("_Exposure", Mathf.Lerp(1f, 10f, t));
-
-            // È¯°æ±¤µµ ÇÏ¾é°Ô
+            // 3. âœ¨ í™˜ê²½ê´‘(Ambient): ê²€ì€ìƒ‰ -> í•˜ì–€ìƒ‰
             RenderSettings.ambientLight = Color.Lerp(Color.black, Color.white, t);
 
             yield return null;
         }
 
-        // 2. ÇÇÅ© ½ÃÁ¡¿¡¼­ ½ºÄ«ÀÌ¹Ú½º ±³Ã¼ (È­¸éÀÌ °ÅÀÇ ÇÏ¾â ¶§)
+        // --- 2ë‹¨ê³„: ìŠ¤ì¹´ì´ë°•ìŠ¤ êµì²´ ---
         if (daySkybox != null)
         {
             RenderSettings.skybox = daySkybox;
-            DynamicGI.UpdateEnvironment(); // Á¶¸í ¸®¾óÅ¸ÀÓ ¾÷µ¥ÀÌÆ®
+            DynamicGI.UpdateEnvironment();
         }
 
-        // 3. ´Ù½Ã ÀÚ¿¬½º·¯¿î ³·ÀÇ ¹à±â·Î µ¹¾Æ¿À´Â ´Ü°è
+        yield return new WaitForSeconds(0.5f);
+
+        // --- 3ë‹¨ê³„: ì•ˆê°œ ê±·ì–´ë‚´ê¸° & ë°ê¸° ì •ì°© ---
         elapsed = 0f;
-        float fadeOutDuration = 3f;
-        while (elapsed < fadeOutDuration)
+        while (elapsed < transitionDuration)
         {
             elapsed += Time.deltaTime;
-            float t = elapsed / fadeOutDuration;
+            float t = elapsed / transitionDuration;
 
-            // ³·ÀÇ ÀûÁ¤ ¼öÄ¡·Î º¹±¸
+            // ì•ˆê°œ ê±·ì–´ë‚´ê¸°
+            RenderSettings.fogDensity = Mathf.Lerp(1.0f, 0f, t);
+
+            // âœ¨ íƒœì–‘ ë°ê¸°: 8.0 -> 4.5 (ìš”ì²­í•˜ì‹  ë°ê¸°)
             if (mainSun != null)
-                mainSun.intensity = Mathf.Lerp(8.0f, 1.2f, t);
-
-            RenderSettings.skybox.SetFloat("_Exposure", Mathf.Lerp(10f, 1.0f, t));
+                mainSun.intensity = Mathf.Lerp(8.0f, 4.5f, t);
 
             yield return null;
         }
 
-        Debug.Log("¼¼»óÀÇ ºûÀÌ ¿ÏÀüÈ÷ µÇµ¹¾Æ¿Ô½À´Ï´Ù!");
+        // --- 4ë‹¨ê³„: ìµœì¢… ìƒíƒœ í™•ì • (Day Mode) ---
+
+        // 1. ë ‰ ë°©ì§€ìš© ì•ˆê°œ ê±°ë¦¬ ë³µêµ¬ (Linear, 15~22)
+        RenderSettings.fogMode = originalFogMode;
+        RenderSettings.fogStartDistance = originalFogStart;
+        RenderSettings.fogEndDistance = originalFogEnd;
+        RenderSettings.fog = true; // ì•ˆê°œ ì¼œê¸°
+
+        // 2. âœ¨ ì•ˆê°œ ìƒ‰ê¹”ì€ 'í°ìƒ‰'ìœ¼ë¡œ ìœ ì§€! 
+        // (ë‚®ì´ë‹ˆê¹Œ ë©€ë¦¬ ìˆëŠ” ë•…ì´ ê²€ì€ìƒ‰ì´ ì•„ë‹ˆë¼ í•˜ì–—ê²Œ íë ¤ì ¸ì•¼ ìì—°ìŠ¤ëŸ¬ì›€)
+        RenderSettings.fogColor = Color.white;
+        // ë§Œì•½ ìŠ¤ì¹´ì´ë°•ìŠ¤ì™€ ë” ì˜ ì–´ìš¸ë¦¬ê²Œ í•˜ë ¤ë©´ í•˜ëŠ˜ìƒ‰(new Color(0.7f, 0.8f, 1f)) ì¶”ì²œ
+
+        // 3. âœ¨ ì¡°ëª… ìµœì¢… í™•ì •
+        RenderSettings.ambientLight = Color.white; // í™˜ê²½ê´‘ í™”ì´íŠ¸ ìœ ì§€
+        if (mainSun != null)
+        {
+            mainSun.color = Color.white; // íƒœì–‘ìƒ‰ í™”ì´íŠ¸
+            mainSun.intensity = 4.5f;    // ê°•ë„ 4.5 ê³ ì •
+        }
+
+        Debug.Log("ğŸ‰ ëˆˆë¶€ì‹  ë¹›ì˜ ì„¸ìƒì´ ë˜ì—ˆìŠµë‹ˆë‹¤! (Intensity: 4.5)");
         Destroy(gameObject);
+    }
+
+    // ê°•ì œ ì¢…ë£Œ ì‹œì—ëŠ” ë‹¤ì‹œ ì›ë˜ëŒ€ë¡œ(ê²€ì€ ì•ˆê°œ ë“±) ë³µêµ¬í•˜ê³  ì‹¶ë‹¤ë©´ ì•„ë˜ ì½”ë“œ ìœ ì§€
+    // í•˜ì§€ë§Œ ê²Œì„ ë‚´ì—ì„œëŠ” 'ë°ì€ ì„¸ìƒ'ì´ ê³„ì† ìœ ì§€ë˜ì–´ì•¼ í•˜ë¯€ë¡œ OnDestroyì—ëŠ” ë„£ì§€ ì•ŠìŒ
+    private void OnApplicationQuit()
+    {
+        // ë„ê³  ë‚˜ê°ˆ ë•ŒëŠ” ì—ë””í„° ëˆˆë½• ë°©ì§€ë¥¼ ìœ„í•´ ì ë‹¹íˆ ë³µêµ¬
+        RenderSettings.fogColor = Color.black;
     }
 }

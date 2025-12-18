@@ -249,7 +249,7 @@ public class PlayerHarvester : MonoBehaviour
 
     void LaunchLight()
     {
-        Vector3 spawnPos = transform.position + _cam.transform.forward * 1.5f + Vector3.up * 1.5f;
+        Vector3 spawnPos = transform.position + _cam.transform.forward * 3.0f + Vector3.up * 1.5f;
         if (lightProjectilePrefab != null)
             Instantiate(lightProjectilePrefab, spawnPos, Quaternion.identity);
         inventory.ShowNotice("빛이 하늘로 떠오릅니다! 세상이 밝아집니다.");
