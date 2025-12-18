@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class Enemy : MonoBehaviour
+// IDamageable 인터페이스 구현
+public class Enemy : MonoBehaviour, IDamageable
 {
-    // === 상태 열거형 (RunAway 삭제됨) ===
+    // === 상태 열거형 ===
     public enum EnemyState { Idle, Trace, Suicide }
     public EnemyState state = EnemyState.Idle;
 
@@ -45,7 +46,6 @@ public class Enemy : MonoBehaviour
 
     private int calculatedMaxHP;
     private int calculatedDamage;
-    // private const float RUN_AWAY_HP_PERCENT = 0.2f; // 삭제됨
 
     // === 컴포넌트 ===
     private Transform player;
@@ -75,7 +75,6 @@ public class Enemy : MonoBehaviour
             enemyRigidbody = gameObject.AddComponent<Rigidbody>();
         }
 
-        // 평소에는 물리 연산을 꺼둡니다 (직접 이동 제어 위함)
         enemyRigidbody.isKinematic = true;
         enemyRigidbody.useGravity = false;
         enemyRigidbody.constraints = RigidbodyConstraints.FreezeRotation;
@@ -92,7 +91,6 @@ public class Enemy : MonoBehaviour
     {
         if (player == null) return;
 
-        // 넉백 중(isKinematic이 false일 때)에는 AI 이동 로직을 멈춥니다.
         if (enemyRigidbody != null && !enemyRigidbody.isKinematic) return;
 
         if (state == EnemyState.Suicide) return;
@@ -102,12 +100,10 @@ public class Enemy : MonoBehaviour
         switch (state)
         {
             case EnemyState.Idle:
-                // 도망 로직 삭제: 바로 추적 거리 체크
                 if (dist < traceRange) state = EnemyState.Trace;
                 break;
 
             case EnemyState.Trace:
-                // 도망 로직 삭제: 자폭 범위 or 계속 추적
                 if (dist < suicideRange)
                 {
                     state = EnemyState.Suicide;
@@ -118,14 +114,18 @@ public class Enemy : MonoBehaviour
                     TracePlayer();
                 }
                 break;
-
             case EnemyState.Suicide:
                 break;
-
-                // case EnemyState.RunAway: 삭제됨
         }
     }
 
+    // 1. 인터페이스용 단순 피격 함수
+    public void TakeDamage(int damage)
+    {
+        TakeDamage(damage, null);
+    }
+
+    // 2. 넉백을 포함한 피격 함수
     public void TakeDamage(int damage, Vector3? attackerPos = null)
     {
         if (currentHP <= 0) return;
@@ -136,7 +136,6 @@ public class Enemy : MonoBehaviour
         currentHP -= damage;
         if (hpSlider != null) hpSlider.value = currentHP;
 
-        // 넉백 실행
         if (attackerPos.HasValue && currentHP > 0)
         {
             StopCoroutine("KnockbackRoutine");
@@ -174,12 +173,11 @@ public class Enemy : MonoBehaviour
     {
         if (enemyRenderer == null) yield break;
         float blinkDuration = 0.1f;
-        Color original = enemyRenderer.material.color;
 
         enemyRenderer.material.color = Color.red;
         yield return new WaitForSeconds(blinkDuration);
 
-        enemyRenderer.material.color = (state == EnemyState.Suicide) ? warningColor : original;
+        enemyRenderer.material.color = (state == EnemyState.Suicide) ? warningColor : originalColor;
         blinkCoroutine = null;
     }
 
@@ -188,7 +186,18 @@ public class Enemy : MonoBehaviour
         currentHP = 0;
         StopAllCoroutines();
 
-        GetComponent<EnemyLoot>().TryDropLoot();
+        // 🔻 [수정 완료] 주석 해제됨
+        // EnemyLoot 컴포넌트를 찾아서 아이템 드랍을 실행합니다.
+        EnemyLoot loot = GetComponent<EnemyLoot>();
+        if (loot != null)
+        {
+            loot.TryDropLoot();
+        }
+        else
+        {
+            // 혹시 Loot 스크립트를 깜빡했을 경우를 대비해 로그 출력 (개발용)
+            // Debug.LogWarning("EnemyLoot 스크립트가 붙어있지 않습니다!");
+        }
 
         Destroy(gameObject);
     }
@@ -205,11 +214,10 @@ public class Enemy : MonoBehaviour
             SnapToGround();
         }
 
-        Vector3 lookTarget = player.position; lookTarget.y = transform.position.y;
+        Vector3 lookTarget = player.position;
+        lookTarget.y = transform.position.y;
         transform.LookAt(lookTarget);
     }
-
-    // RunAwayFromPlayer() 함수 삭제됨
 
     bool CheckGround(Vector3 position)
     {
@@ -275,6 +283,7 @@ public class Enemy : MonoBehaviour
         {
             if (hitCollider.CompareTag("Player"))
             {
+                // 플레이어 체력(빛) 깎기
                 PlayerLightHealth playerHealthScript = hitCollider.GetComponent<PlayerLightHealth>();
                 if (playerHealthScript != null)
                 {
@@ -293,22 +302,22 @@ public class Enemy : MonoBehaviour
                 for (int z = -radius; z <= radius; z++)
                 {
                     Vector3 targetPos = centerPos + new Vector3Int(x, y, z);
-                    Collider[] blockCheck = Physics.OverlapBox(targetPos, Vector3.one * 0.45f, Quaternion.identity, LayerMask.GetMask("Block") != 0 ? LayerMask.GetMask("Block") : ~0);
+                    int layerMask = LayerMask.GetMask("Block") != 0 ? LayerMask.GetMask("Block") : ~0;
+
+                    Collider[] blockCheck = Physics.OverlapBox(targetPos, Vector3.one * 0.45f, Quaternion.identity, layerMask);
 
                     foreach (Collider col in blockCheck)
                     {
-                        if (col.CompareTag("Block"))
+                        Block block = col.GetComponent<Block>();
+                        if (block != null)
                         {
-                            Block block = col.GetComponent<Block>();
-                            if (block != null)
-                            {
-                                block.Hit(block.maxHP + 1);
-                            }
+                            block.Hit(block.maxHP + 1);
                         }
                     }
                 }
             }
         }
+
         Die();
     }
 }

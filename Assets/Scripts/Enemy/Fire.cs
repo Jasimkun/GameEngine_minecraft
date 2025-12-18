@@ -185,11 +185,11 @@ public class Fire : MonoBehaviour, IDamageable
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other.CompareTag("DeadZone"))
-        {
-            Die();
-            return;
-        }
+        //if (other.CompareTag("DeadZone"))
+        //{
+        //    Die();
+        //    return;
+        //}
 
         // 플레이어 투사체 충돌 처리 (필요시 주석 해제)
         /*
