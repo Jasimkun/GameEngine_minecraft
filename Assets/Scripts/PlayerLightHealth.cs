@@ -43,6 +43,23 @@ public class PlayerLightHealth : MonoBehaviour
         }
     }
 
+    void Update()
+    {
+        // 🔻 [치트키] 숫자키 9을 눌렀을 때 (키패드 9 또는 상단 9 둘 다 작동하게 하려면 Alpha0 사용)
+        if (Input.GetKeyDown(KeyCode.Alpha9) || Input.GetKeyDown(KeyCode.Keypad9))
+        {
+            CheatHeal(10f);
+        }
+    }
+
+    // 치트용 회복 함수
+    private void CheatHeal(float amount)
+    {
+        Heal(amount);
+        Debug.Log($"<color=cyan>[치트]</color> 체력을 {amount}만큼 회복했습니다. 현재 체력: {currentHealth}");
+    }
+
+
     // 🔻 [추가] 지속 데미지(DoT) 시작 함수
     public void StartDamageOverTime(float damagePerTick, float duration, float interval)
     {
