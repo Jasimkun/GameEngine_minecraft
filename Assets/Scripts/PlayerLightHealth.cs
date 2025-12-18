@@ -88,9 +88,23 @@ public class PlayerLightHealth : MonoBehaviour
 
     void Die()
     {
-        Debug.Log("플레이어 사망! 빛이 소멸했습니다.");
-        if (playerLight != null) playerLight.intensity = 0;
+        Debug.Log("플레이어 사망! 게임을 종료합니다.");
 
-        // 여기에 게임오버 UI나 씬 재시작 로직 추가
+        if (playerLight != null)
+            playerLight.intensity = 0;
+
+        // 게임 종료 실행
+        QuitGame();
+    }
+
+    private void QuitGame()
+    {
+#if UNITY_EDITOR
+        // 유니티 에디터에서 플레이 모드를 중지시킴
+        UnityEditor.EditorApplication.isPlaying = false;
+#else
+            // 빌드된 실제 게임 프로그램을 종료함
+            Application.Quit();
+#endif
     }
 }
