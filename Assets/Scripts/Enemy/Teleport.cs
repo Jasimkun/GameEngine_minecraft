@@ -266,10 +266,34 @@ public class Teleport : MonoBehaviour, IDamageable
         currentHP = 0;
         StopAllCoroutines();
 
-        // 🌟 아이템 드랍 (EnemyLoot)
-        EnemyLoot loot = GetComponent<EnemyLoot>();
-        if (loot != null) loot.TryDropLoot();
+        // =========================================================
+        // ✨ [빛 조각 드롭] 매니저에게 허락받기 (EnemyLoot 연동)
+        // =========================================================
 
+        // 1. 내 몸에 붙은 EnemyLoot 정보 가져오기
+        EnemyLoot loot = GetComponent<EnemyLoot>();
+
+        if (loot != null)
+        {
+            // 2. 확률 계산 (EnemyLoot에 설정된 dropChance 사용)
+            float randomValue = Random.Range(0f, 100f);
+
+            if (randomValue <= loot.dropChance)
+            {
+                // 3. 당첨되면 매니저에게 "이거 떨궈도 돼?" 하고 물어봄
+                // (loot.itemPrefab이 빛 조각 프리팹이어야 함)
+                if (WorldLightManager.Instance != null && loot.itemPrefab != null)
+                {
+                    WorldLightManager.Instance.TryDropLightPiece(transform.position, loot.itemPrefab);
+                }
+            }
+        }
+        else
+        {
+            // Loot 스크립트가 없을 때의 예외 처리 (필요하면 추가)
+        }
+
+        // 4. 적 삭제
         Destroy(gameObject);
     }
 

@@ -13,6 +13,12 @@ public class EnemySpawner : MonoBehaviour
 
     void Update()
     {
+
+        if (WorldLightManager.Instance != null && WorldLightManager.Instance.IsLightRestored)
+        {
+            return; // 빛이 돌아왔으면 스폰 안 함! (일 안 함)
+        }
+
         timer += Time.deltaTime;
 
         if (timer >= spawnInterval)

@@ -186,19 +186,31 @@ public class Enemy : MonoBehaviour, IDamageable
         currentHP = 0;
         StopAllCoroutines();
 
-        // 🔻 [수정 완료] 주석 해제됨
-        // EnemyLoot 컴포넌트를 찾아서 아이템 드랍을 실행합니다.
+        // 1. EnemyLoot 컴포넌트 가져오기 (여기에 빛 조각 정보가 들어있음)
         EnemyLoot loot = GetComponent<EnemyLoot>();
+
         if (loot != null)
         {
-            loot.TryDropLoot();
+            // 2. 확률 계산 (EnemyLoot에 설정된 dropChance 사용)
+            // 0~100 사이 랜덤 숫자가 확률보다 낮으면 당첨
+            float randomValue = Random.Range(0f, 100f);
+
+            if (randomValue <= loot.dropChance)
+            {
+                // 3. 당첨되면 매니저에게 "이거 떨궈도 돼?" 하고 물어봄
+                if (WorldLightManager.Instance != null && loot.itemPrefab != null)
+                {
+                    // loot.itemPrefab은 EnemyLoot에 연결해둔 '빛 조각 프리팹'입니다.
+                    WorldLightManager.Instance.TryDropLightPiece(transform.position, loot.itemPrefab);
+                }
+            }
         }
         else
         {
-            // 혹시 Loot 스크립트를 깜빡했을 경우를 대비해 로그 출력 (개발용)
-            // Debug.LogWarning("EnemyLoot 스크립트가 붙어있지 않습니다!");
+            // 혹시 EnemyLoot가 없는 몬스터라면 그냥 경고 없이 넘어감
         }
 
+        // 4. 적 삭제
         Destroy(gameObject);
     }
 

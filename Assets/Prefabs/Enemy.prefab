@@ -540,7 +540,7 @@ MonoBehaviour:
   itemPrefab: {fileID: 463055303933667152, guid: e496d7249193cb944b92177e13f7c424,
     type: 3}
   itemType: 9
-  dropChance: 100
+  dropChance: 10
   minAmount: 1
   maxAmount: 1
 --- !u!1001 &9133331234171321707

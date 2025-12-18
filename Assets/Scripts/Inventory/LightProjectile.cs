@@ -138,6 +138,11 @@ public class LightProjectile : MonoBehaviour
             mainSun.intensity = 4.5f;    // 강도 4.5 고정
         }
 
+        if (WorldLightManager.Instance != null)
+        {
+            WorldLightManager.Instance.ConfirmPeace();
+        }
+
         Debug.Log("🎉 눈부신 빛의 세상이 되었습니다! (Intensity: 4.5)");
         Destroy(gameObject);
     }
