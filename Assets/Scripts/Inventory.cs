@@ -1,15 +1,15 @@
-using System.Collections;
+ï»¿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using TMPro; // ÅØ½ºÆ® Ãâ·ÂÀ» À§ÇØ ÇÊ¿äÇÕ´Ï´Ù.
+using TMPro; // í…ìŠ¤íŠ¸ ì¶œë ¥ì„ ìœ„í•´ í•„ìš”í•©ë‹ˆë‹¤.
 
 public class Inventory : MonoBehaviour
 {
     public Dictionary<ItemType, int> items = new();
 
-    [Header("UI ¿¬°á")]
+    [Header("UI ì—°ê²°")]
     public InventoryUI invenUI;
-    public TMP_Text noticeText; // È­¸é Áß¾Ó¿¡ ¸Ş½ÃÁö¸¦ ¶ç¿ï ÅØ½ºÆ® ÄÄÆ÷³ÍÆ®
+    public TMP_Text noticeText; // í™”ë©´ ì¤‘ì•™ì— ë©”ì‹œì§€ë¥¼ ë„ìš¸ í…ìŠ¤íŠ¸ ì»´í¬ë„ŒíŠ¸
 
     private Coroutine noticeCoroutine;
 
@@ -17,7 +17,7 @@ public class Inventory : MonoBehaviour
     {
         if (invenUI == null) invenUI = FindObjectOfType<InventoryUI>();
 
-        // ½ÃÀÛÇÒ ¶§ ¸Ş½ÃÁö ÅØ½ºÆ®´Â ºñ¿öµÓ´Ï´Ù.
+        // ì‹œì‘í•  ë•Œ ë©”ì‹œì§€ í…ìŠ¤íŠ¸ëŠ” ë¹„ì›Œë‘¡ë‹ˆë‹¤.
         if (noticeText != null) noticeText.text = "";
     }
 
@@ -32,9 +32,9 @@ public class Inventory : MonoBehaviour
         if (!items.ContainsKey(type)) items[type] = 0;
         items[type] += count;
 
-        Debug.Log($"[Inventory] +{count} {type} (ÃÑ {items[type]}°³)");
+        Debug.Log($"[Inventory] +{count} {type} (ì´ {items[type]}ê°œ)");
 
-        // ºû Á¶°¢ÀÌ Ãß°¡µÇ¾úÀ» ¶§¸¸ ÀÚµ¿ ÇÕÃ¼ Ã¼Å©
+        // ë¹› ì¡°ê°ì´ ì¶”ê°€ë˜ì—ˆì„ ë•Œë§Œ ìë™ í•©ì²´ ì²´í¬
         if (type == ItemType.LightPiece)
         {
             TryCombineLight();
@@ -48,7 +48,7 @@ public class Inventory : MonoBehaviour
         if (!items.TryGetValue(type, out var have) || have < count) return false;
 
         items[type] = have - count;
-        Debug.Log($"[Inventory] -{count} {type} (ÃÑ {items[type]}°³)");
+        Debug.Log($"[Inventory] -{count} {type} (ì´ {items[type]}ê°œ)");
 
         if (items[type] == 0)
         {
@@ -64,32 +64,32 @@ public class Inventory : MonoBehaviour
         return true;
     }
 
-    // --- ºû Á¶°¢ ÀÚµ¿ ÇÕÃ¼ ·ÎÁ÷ ---
+    // --- ë¹› ì¡°ê° ìë™ í•©ì²´ ë¡œì§ ---
     private void TryCombineLight()
     {
         int pieceCount = GetItemCount(ItemType.LightPiece);
 
         if (pieceCount >= 3)
         {
-            // 1. Á¶°¢ ¼Ò¸ğ
+            // 1. ì¡°ê° ì†Œëª¨
             if (Consume(ItemType.LightPiece, 3))
             {
-                // 2. ¿Ï¼ºµÈ ºû Ãß°¡
+                // 2. ì™„ì„±ëœ ë¹› ì¶”ê°€
                 Add(ItemType.LightPiece, 1);
 
-                // 3. È­¸é Áß¾Ó ¸Ş½ÃÁö Ãâ·Â
-                ShowNotice("ºû Á¶°¢ÀÌ ÇÏ³ª·Î ÇÕÃÄÁ³½À´Ï´Ù!");
-                Debug.Log("[Inventory] ºû ÇÕÃ¼ ¼º°ø!");
+                // 3. í™”ë©´ ì¤‘ì•™ ë©”ì‹œì§€ ì¶œë ¥
+                ShowNotice("ë¹› ì¡°ê°ì´ í•˜ë‚˜ë¡œ í•©ì³ì¡ŒìŠµë‹ˆë‹¤!");
+                Debug.Log("[Inventory] ë¹› í•©ì²´ ì„±ê³µ!");
             }
         }
     }
 
-    // --- È­¸é ¸Ş½ÃÁö Ãâ·Â ·ÎÁ÷ ---
+    // --- í™”ë©´ ë©”ì‹œì§€ ì¶œë ¥ ë¡œì§ ---
     public void ShowNotice(string message)
     {
         if (noticeText == null) return;
 
-        // ÀÌ¹Ì ¸Ş½ÃÁö°¡ ¶° ÀÖ´Â °æ¿ì ÄÚ·çÆ¾À» ¸ØÃß°í »õ·Î ½ÃÀÛ
+        // ì´ë¯¸ ë©”ì‹œì§€ê°€ ë–  ìˆëŠ” ê²½ìš° ì½”ë£¨í‹´ì„ ë©ˆì¶”ê³  ìƒˆë¡œ ì‹œì‘
         if (noticeCoroutine != null) StopCoroutine(noticeCoroutine);
         noticeCoroutine = StartCoroutine(NoticeRoutine(message));
     }
@@ -99,7 +99,7 @@ public class Inventory : MonoBehaviour
         noticeText.text = message;
         noticeText.gameObject.SetActive(true);
 
-        // 3ÃÊ µ¿¾È º¸¿©ÁÜ
+        // 3ì´ˆ ë™ì•ˆ ë³´ì—¬ì¤Œ
         yield return new WaitForSecondsRealtime(3f);
 
         noticeText.text = "";

@@ -245,7 +245,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5054790640a8bd946adbb5a3fd29ddb0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  inventory: {fileID: 4124904468919319746}
+  inventory: {fileID: 4124904468919319748}
   recipeList:
   - {fileID: 11400000, guid: 7ae6d235ae89e5a4fb017344eda7294d, type: 2}
   - {fileID: 11400000, guid: 6bd983237b788694c904e444b950c1d2, type: 2}
@@ -4915,8 +4915,8 @@ GameObject:
   - component: {fileID: 482804717300825448}
   - component: {fileID: 4124904468919319745}
   - component: {fileID: 4124904468919319744}
-  - component: {fileID: 4124904468919319746}
   - component: {fileID: 4124904468919319747}
+  - component: {fileID: 4124904468919319748}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -4961,24 +4961,10 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   hitCooldown: 0.15
-  inventory: {fileID: 4124904468919319746}
+  inventory: {fileID: 4124904468919319748}
   selectedBlock: {fileID: 0}
   lightProjectilePrefab: {fileID: 463055303933667152, guid: 1d823bda8b12ad84788bd234fdb0eeb2,
     type: 3}
---- !u!114 &4124904468919319746
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4124904468919319743}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 214ad3dc4a7d12b4ca6c008ce2569ef5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  invenUI: {fileID: 165931393}
-  noticeText: {fileID: 323413436}
 --- !u!114 &4124904468919319747
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4996,6 +4982,20 @@ MonoBehaviour:
   playerLight: {fileID: 1324290130}
   maxIntensity: 10
   healthSlider: {fileID: 449289107}
+--- !u!114 &4124904468919319748
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4124904468919319743}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 214ad3dc4a7d12b4ca6c008ce2569ef5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  invenUI: {fileID: 165931393}
+  noticeText: {fileID: 323413436}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
