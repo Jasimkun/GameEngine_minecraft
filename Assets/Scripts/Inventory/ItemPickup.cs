@@ -1,26 +1,28 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 public class ItemPickup : MonoBehaviour
 {
+    // ğŸ”» [ì¶”ê°€] ì •ì  ë³€ìˆ˜ë¡œ ë”± í•œ ë²ˆë§Œ ì‹¤í–‰ë˜ì—ˆëŠ”ì§€ ì²´í¬ (ëª¨ë“  ItemPickupì´ ì´ ë³€ìˆ˜ë¥¼ ê³µìœ í•¨)
+    private static bool hasShownFirstNotice = false;
+
     public ItemType itemType;
     public int amount = 1;
 
-    [Header("ÀÚ¼® ¼³Á¤")]
-    public float pickupRange = 3f;  // ÀÌ °Å¸® ¾È¿¡ µé¾î¿À¸é ²ø·Á¿È
-    public float moveSpeed = 10f;   // ³¯¾Æ¿À´Â ¼Óµµ
-    public float pickupDelay = 0.5f; // »ı¼º Á÷ÈÄ È¹µæ ¹æÁö ½Ã°£
+    [Header("ìì„ ì„¤ì •")]
+    public float pickupRange = 3f;
+    public float moveSpeed = 10f;
+    public float pickupDelay = 0.5f;
 
     private Transform playerTransform;
     private Rigidbody rb;
     private float spawnTime;
-    private bool isMagnetized = false; // ÀÚ¼® ¸ğµå ÄÑÁ³´ÂÁö ¿©ºÎ
+    private bool isMagnetized = false;
 
     private void Start()
     {
         spawnTime = Time.time;
         rb = GetComponent<Rigidbody>();
 
-        // ÇÃ·¹ÀÌ¾î ¹Ì¸® Ã£¾ÆµÎ±â (ÅÂ±×°¡ PlayerÀÎ ¿ÀºêÁ§Æ®)
         GameObject player = GameObject.FindGameObjectWithTag("Player");
         if (player != null)
         {
@@ -30,14 +32,11 @@ public class ItemPickup : MonoBehaviour
 
     private void Update()
     {
-        // 1. ¾ÆÁ÷ È¹µæ ´ë±â ½Ã°£ÀÌ¸é ¹«½Ã
         if (Time.time < spawnTime + pickupDelay) return;
         if (playerTransform == null) return;
 
-        // 2. ÇÃ·¹ÀÌ¾î¿ÍÀÇ °Å¸® °è»ê
         float distance = Vector3.Distance(transform.position, playerTransform.position);
 
-        // 3. ÀÚ¼® ¹üÀ§ ¾È¿¡ µé¾î¿À¸é ³¯¾Æ¿À±â ½ÃÀÛ!
         if (distance <= pickupRange)
         {
             isMagnetized = true;
@@ -45,20 +44,14 @@ public class ItemPickup : MonoBehaviour
 
         if (isMagnetized)
         {
-            // ¹°¸® È¿°ú ²ô±â (¶¥¿¡ ºñºñÁö ¾Ê°í ³¯¾Æ¿À°Ô ÇÔ)
             if (rb != null && !rb.isKinematic)
             {
-                rb.isKinematic = true;  // ¹°¸® ²ô±â
-                rb.useGravity = false;  // Áß·Â ²ô±â
-
-                // (¼±ÅÃ) Ãæµ¹Ã¼µµ ²¨¼­ º® ¶Õ°í ¿À°Ô ÇÏ·Á¸é:
-                // GetComponent<Collider>().enabled = false; 
+                rb.isKinematic = true;
+                rb.useGravity = false;
             }
 
-            // ÇÃ·¹ÀÌ¾î ÂÊÀ¸·Î ÀÌµ¿
             transform.position = Vector3.MoveTowards(transform.position, playerTransform.position, moveSpeed * Time.deltaTime);
 
-            // ¾ÆÁÖ °¡±î¿öÁö¸é(0.5m) È¹µæ Ã³¸®
             if (distance < 0.5f)
             {
                 GiveItemToPlayer();
@@ -66,10 +59,9 @@ public class ItemPickup : MonoBehaviour
         }
     }
 
-    // È¤½Ã¶óµµ ¸öÀ¸·Î Á÷Á¢ ºÎµúÇûÀ» ¶§¸¦ À§ÇÑ ¹é¾÷
     private void OnCollisionEnter(Collision collision)
     {
-        if (isMagnetized) return; // ÀÚ¼® ¸ğµåÀÏ ¶© À§¿¡¼­ Ã³¸®ÇÏ¹Ç·Î ÆĞ½º
+        if (isMagnetized) return;
         if (collision.gameObject.CompareTag("Player"))
         {
             GiveItemToPlayer();
@@ -84,7 +76,15 @@ public class ItemPickup : MonoBehaviour
         if (inventory != null)
         {
             inventory.Add(itemType, amount);
-            // Debug.Log($"[Item] {itemType} ÀÚ¼® È¹µæ!");
+
+            // ğŸ”» [ì¶”ê°€] ë¹› ì¡°ê°ì„ ì–»ì—ˆì„ ë•Œ ìµœì´ˆ 1íšŒ ê³µì§€ ë¡œì§
+            if (itemType == ItemType.LightPiece && !hasShownFirstNotice)
+            {
+                // ì¸ë²¤í† ë¦¬ ìŠ¤í¬ë¦½íŠ¸ì— ìˆëŠ” ShowNotice í•¨ìˆ˜ë¥¼ í˜¸ì¶œí•©ë‹ˆë‹¤.
+                inventory.ShowNotice("í™”ë©´ì„ í´ë¦­í•´ ì°¨ì›ì„ ì´ë™í•˜ì„¸ìš”");
+                hasShownFirstNotice = true; // ì´ì œ ë‹¤ìŒë¶€í„°ëŠ” ì‹¤í–‰ë˜ì§€ ì•ŠìŒ
+            }
+
             Destroy(gameObject);
         }
     }

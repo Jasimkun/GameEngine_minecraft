@@ -78,7 +78,7 @@ public class Inventory : MonoBehaviour
                 Add(ItemType.Light, 1);
 
                 // 3. 화면 중앙 메시지 출력
-                ShowNotice("빛 조각이 하나로 합쳐졌습니다!");
+                ShowNotice("빛 조각이 합쳐졌습니다!" + "화면을 우클릭해 빛을 퍼뜨리세요");
                 Debug.Log("[Inventory] 빛 합체 성공!");
             }
         }
