@@ -337,9 +337,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 459c7cb37b9d169418d3fa1790823531, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  enemyPrefab: {fileID: 5099992602596450727, guid: 759e40a61b124c44f9b9577d53542b41,
+  enemyPrefab: {fileID: 4344872196180416499, guid: 9e27909f53e92fa4e9b253eb52b38531,
     type: 3}
-  spawnInterval: 10
+  spawnInterval: 5
   voxelMap: {fileID: 941363980}
 --- !u!4 &650850925
 Transform:
@@ -596,9 +596,13 @@ MonoBehaviour:
   pickaxeSprite: {fileID: 0}
   woodSprite: {fileID: 0}
   stoneSprite: {fileID: 0}
-  lightSprite: {fileID: 0}
+  lightPieceSprite: {fileID: 0}
   netherrackSprite: {fileID: 0}
   endStoneSprite: {fileID: 0}
+  stoneAxeSprite: {fileID: 0}
+  stonePickaxeSprite: {fileID: 0}
+  stoneSwordSprite: {fileID: 0}
+  lightSprite: {fileID: 0}
   Slot:
   - {fileID: 0}
   - {fileID: 0}
