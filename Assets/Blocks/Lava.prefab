@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 7519315625318020464}
   - component: {fileID: 5092484832923673109}
   - component: {fileID: 5115604386785262689}
+  - component: {fileID: 2435428240003593772}
   m_Layer: 0
   m_Name: Lava
   m_TagString: Block
@@ -121,10 +122,26 @@ MonoBehaviour:
   itemName: "\uBB3C"
   itemIcon: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
   maxStack: 99
+  breakEffectPrefab: {fileID: 0}
   type: 2
   maxHP: 3
-  hp: 0
   dropCount: 1
   mineable: 0
   itemPrefab: {fileID: 5115604386785262689, guid: 02f5ebe7c457bc145b7c8408a528145c,
     type: 3}
+--- !u!114 &2435428240003593772
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5792481177299588748}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 48dc2ce4ce0823c4c883b9d687427424, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  lavaDamagePerTick: 2
+  lavaInterval: 1
+  burnDuration: 3
+  burnInterval: 1
