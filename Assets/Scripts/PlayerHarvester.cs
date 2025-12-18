@@ -7,7 +7,7 @@ public class PlayerHarvester : MonoBehaviour
     [Header("Settings")]
     public float rayDistance = 5f;
     public LayerMask hitMask = ~0;
-    public float hitCooldown = 0.5f; // 공격 속도를 고려해 조금 늘림 (0.15 -> 0.5)
+    public float hitCooldown = 0.5f;
 
     [Header("References")]
     public Inventory inventory;
@@ -16,7 +16,9 @@ public class PlayerHarvester : MonoBehaviour
     private float _nextHitTime;
     private Camera _cam;
     private InventoryUI invenUI;
-    private NoiseVoxelMap voxelMap;
+
+    // ❌ [삭제] 옛날 맵을 기억하는 변수는 이제 필요 없음
+    // private NoiseVoxelMap voxelMap; 
 
     public GameObject lightProjectilePrefab;
 
@@ -26,7 +28,9 @@ public class PlayerHarvester : MonoBehaviour
 
         if (inventory == null) inventory = gameObject.AddComponent<Inventory>();
         invenUI = FindObjectOfType<InventoryUI>();
-        voxelMap = FindObjectOfType<NoiseVoxelMap>();
+
+        // ❌ [삭제] 여기서 맵을 찾으면 1번 씬 맵만 기억하게 됨
+        // voxelMap = FindObjectOfType<NoiseVoxelMap>(); 
     }
 
     void Update()
@@ -54,7 +58,6 @@ public class PlayerHarvester : MonoBehaviour
             Ray rayDebug = _cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
             if (Physics.Raycast(rayDebug, out var hitDebug, rayDistance, hitMask, QueryTriggerInteraction.Ignore))
             {
-                // 적이나 플레이어에게는 블록 설치 미리보기를 띄우지 않음
                 if (hitDebug.collider.CompareTag("Enemy") || hitDebug.collider.CompareTag("Player"))
                 {
                     if (selectedBlock) selectedBlock.transform.localScale = Vector3.zero;
@@ -80,10 +83,9 @@ public class PlayerHarvester : MonoBehaviour
         // 🖱️ 3. 좌클릭 처리 (공격 / 채굴 / 설치)
         // =========================================================
 
-        // [모드 A] 공격 및 채굴 (맨손이거나 도구를 들었을 때)
+        // [모드 A] 공격 및 채굴
         if (!hasItemSelected || isTool)
         {
-            // 공격은 보통 클릭할 때마다(Down) 나가거나, 꾹 누르면(Button) 연속 공격
             if (Input.GetMouseButtonDown(0) && Time.time >= _nextHitTime)
             {
                 _nextHitTime = Time.time + hitCooldown;
@@ -94,21 +96,14 @@ public class PlayerHarvester : MonoBehaviour
                     int damage = 1;
                     if (isTool) damage = GetToolDamage(currentItemType);
 
-                    // 🔻 [수정됨] IDamageable 인터페이스를 찾아서 공격
-                    // Fire 스크립트가 IDamageable을 가지고 있으므로 인식됨
                     IDamageable target = hit.collider.GetComponent<IDamageable>();
 
                     if (target != null)
                     {
                         target.TakeDamage(damage);
-                        Debug.Log($"[공격] {hit.collider.name}을(를) 공격! 데미지: {damage}");
-
-                        // 타격 이펙트 등을 여기에 추가할 수 있음
-                        return; // 적을 때렸으면 블록은 안 캠
+                        return;
                     }
 
-                    // 2순위: 블록 채굴
-                    // (검으로는 블록을 못 캐게 막음)
                     if (currentItemType == ItemType.Sword) return;
 
                     var block = hit.collider.GetComponent<Block>();
@@ -119,7 +114,7 @@ public class PlayerHarvester : MonoBehaviour
                 }
             }
         }
-        // [모드 B] 블록 설치 (블록 아이템을 들고 있을 때)
+        // [모드 B] 블록 설치
         else
         {
             if (Input.GetMouseButtonDown(0))
@@ -127,16 +122,22 @@ public class PlayerHarvester : MonoBehaviour
                 Ray ray = _cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
                 if (Physics.Raycast(ray, out var hit, rayDistance, hitMask, QueryTriggerInteraction.Ignore))
                 {
-                    // 적에게 클릭했을 때는 블록 설치 방지
                     if (hit.collider.GetComponent<IDamageable>() != null) return;
 
                     Vector3Int placePos = AdjacentCellOnHitFace(hit);
 
+                    // 1. 아이템 소모 시도
                     if (inventory.Consume(currentItemType, 1))
                     {
-                        if (voxelMap != null)
+                        // ✅ [수정] Instance를 통해 현재 씬의 살아있는 맵에게 명령
+                        if (NoiseVoxelMap.Instance != null)
                         {
-                            voxelMap.PlaceTile(placePos, currentItemType);
+                            NoiseVoxelMap.Instance.PlaceTile(placePos, currentItemType);
+                        }
+                        else
+                        {
+                            Debug.LogError("현재 씬에 NoiseVoxelMap이 없습니다! 설치 실패.");
+                            // (선택사항) 실패했으면 아이템 다시 돌려주기 로직 추가 가능
                         }
                     }
                 }
@@ -144,7 +145,7 @@ public class PlayerHarvester : MonoBehaviour
         }
 
         // =========================================================
-        // 🗑️ 4. 아이템 버리기 등 기타 기능 (유지)
+        // 🗑️ 4. 아이템 버리기 등 기타 기능
         // =========================================================
         if (hasItemSelected)
         {
@@ -156,13 +157,14 @@ public class PlayerHarvester : MonoBehaviour
                 int count = inventory.GetItemCount(currentItemType);
                 if (count > 0 && inventory.Consume(currentItemType, count))
                 {
-                    voxelMap.ThrowItem(throwStartPos, currentItemType, count, throwForce);
+                    // ✅ [수정] 여기도 Instance 사용
+                    if (NoiseVoxelMap.Instance != null)
+                        NoiseVoxelMap.Instance.ThrowItem(throwStartPos, currentItemType, count, throwForce);
                 }
             }
 
             if (Input.GetMouseButtonDown(1))
             {
-                // '빛' 아이템 특수 사용 로직
                 if (currentItemType == ItemType.Light)
                 {
                     if (inventory.Consume(ItemType.Light, 1))
@@ -170,20 +172,20 @@ public class PlayerHarvester : MonoBehaviour
                         LaunchLight();
                     }
                 }
-                // 일반 아이템 버리기
                 else
                 {
                     if (inventory.Consume(currentItemType, 1))
                     {
-                        voxelMap.ThrowItem(throwStartPos, currentItemType, 1, throwForce);
+                        // ✅ [수정] 여기도 Instance 사용
+                        if (NoiseVoxelMap.Instance != null)
+                            NoiseVoxelMap.Instance.ThrowItem(throwStartPos, currentItemType, 1, throwForce);
                     }
                 }
             }
         }
     }
 
-    // --- Helper Functions ---
-
+    // --- Helper Functions (그대로 유지) ---
     bool CheckIsTool(ItemType type)
     {
         return type == ItemType.Axe || type == ItemType.Pickaxe || type == ItemType.Sword ||

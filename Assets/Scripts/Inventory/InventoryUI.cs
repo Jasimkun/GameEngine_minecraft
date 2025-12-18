@@ -1,12 +1,13 @@
-using System.Collections;
+ï»¿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement; // 1. ì´ê²Œ ê¼­ ìˆì–´ì•¼ ì”¬ ì´ë™ì„ ê°ì§€í•©ë‹ˆë‹¤!
 
 public class InventoryUI : MonoBehaviour
 {
-
-    //°¢ Å¥ºê º° ½ºÇÁ¶óÀÌÆ®
+    // ... (ê¸°ì¡´ ìŠ¤í”„ë¼ì´íŠ¸ ë³€ìˆ˜ë“¤ì€ ê·¸ëŒ€ë¡œ ìœ ì§€) ...
+    [Header("Sprites")]
     public Sprite dirtSprite;
     public Sprite grassSprite;
     public Sprite waterSprite;
@@ -24,87 +25,112 @@ public class InventoryUI : MonoBehaviour
     public Sprite stoneSwordSprite;
     public Sprite lightSprite;
 
-    public List<Transform> Slot = new List<Transform>();     //³» UIÀÇ °¢ ½½·ÔµéÀÇ ¸®½ºÆ®
-    public GameObject SlotItem;     //½½·Ô ³»ºÎ¿¡ µé¾î°¡´Â ¾ÆÀÌÅÛ
-    List<GameObject> items = new List<GameObject>();        //¾ÆÀÌÅÛ »èÁ¦¿ë ÀüÃ¼ ¸®½ºÆ®
-    //ÀÎº¥Åä¸® ¾÷µ¥ÀÌÆ® ½Ã È£Ãâ
+    [Header("UI References")]
+    // ì´ ë¦¬ìŠ¤íŠ¸ê°€ ì”¬ ë„˜ì–´ê°ˆ ë•Œ ìê¾¸ ì—°ê²°ì´ ëŠê²¨ì„œ ë¬¸ì œì…ë‹ˆë‹¤.
+    public List<Transform> Slot = new List<Transform>();
+    public GameObject SlotItem;
+    List<GameObject> items = new List<GameObject>();
 
     public int selectedIndex = -1;
 
+    // -------------------------------------------------------------
+    // âœ… [ì¶”ê°€] ì”¬ì´ ë°”ë€” ë•Œë§ˆë‹¤ ìŠ¬ë¡¯ì„ ë‹¤ì‹œ ì—°ê²°í•˜ëŠ” ê¸°ëŠ¥
+    // -------------------------------------------------------------
+    private void OnEnable()
+    {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    private void OnDisable()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
+    void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        // ì”¬ì´ ë¡œë“œë˜ë©´ ìŠ¬ë¡¯ì„ ë‹¤ì‹œ ì°¾ìŠµë‹ˆë‹¤.
+        FindSlots();
+    }
+
+    void FindSlots()
+    {
+        // 1. ê¸°ì¡´ ë¦¬ìŠ¤íŠ¸ê°€ ì—‰ë§ì¼ ìˆ˜ ìˆìœ¼ë‹ˆ ë¹„ì›ë‹ˆë‹¤.
+        Slot.Clear();
+
+        // 2. í˜„ì¬ ë‚´ ê²Œì„ì˜¤ë¸Œì íŠ¸(Canvas í˜¹ì€ Panel) ì•„ë˜ì— ìˆëŠ” ìŠ¬ë¡¯ë“¤ì„ ë‹¤ ì°¾ìŠµë‹ˆë‹¤.
+        // (ë§Œì•½ InventoryUI ìŠ¤í¬ë¦½íŠ¸ê°€ GlobalManagerì— ìˆê³ , UIê°€ ê·¸ ìì‹ì´ë¼ë©´ ì•„ë˜ ì½”ë“œë¡œ ì¶©ë¶„í•©ë‹ˆë‹¤)
+        // ì£¼ì˜: ìŠ¬ë¡¯ì˜ ë¶€ëª¨ ì˜¤ë¸Œì íŠ¸ ì´ë¦„ì´ "Grid"ë¼ê³  ê°€ì •í•˜ê±°ë‚˜, 
+        // í˜¹ì€ ëª¨ë“  ìì‹ ì¤‘ì—ì„œ ì´ë¦„ì— "Slot"ì´ ë“¤ì–´ê°€ëŠ” ë…€ì„ì„ ì°¾ìŠµë‹ˆë‹¤.
+
+        // ë°©ë²• A: ë‚´ ìì‹ë“¤ ì¤‘ 'Image' ì»´í¬ë„ŒíŠ¸ê°€ ìˆê³  ì´ë¦„ì´ 'Slot'ì¸ ê²ƒë“¤ì„ ì°¾ëŠ”ë‹¤ (ê°€ì¥ ì•ˆì „)
+        foreach (Transform child in GetComponentsInChildren<Transform>(true))
+        {
+            // ë¶€ëª¨(ë‚˜ ìì‹ )ëŠ” ì œì™¸í•˜ê³ , ì´ë¦„ì— "Slot"ì´ í¬í•¨ëœ ë…€ì„ë§Œ ë¦¬ìŠ¤íŠ¸ì— ì¶”ê°€
+            // (í•˜ì´ì–´ë¼í‚¤ì—ì„œ ìŠ¬ë¡¯ë“¤ ì´ë¦„ì´ Slot (1), Slot (2) ì´ëŸ° ì‹ì´ì–´ì•¼ ì˜ ì‘ë™í•©ë‹ˆë‹¤)
+            if (child != transform && (child.name.Contains("Slot") || child.name.Contains("Cell")))
+            {
+                Slot.Add(child);
+            }
+        }
+
+        Debug.Log($"[InventoryUI] ì”¬ ì´ë™ í›„ ìŠ¬ë¡¯ {Slot.Count}ê°œë¥¼ ë‹¤ì‹œ ì—°ê²°í–ˆìŠµë‹ˆë‹¤.");
+    }
+
+    // -------------------------------------------------------------
+
     public void UpdateInventory(Inventory myInven)
     {
-        // 1. ±âÁ¸ ½½·Ô ÃÊ±âÈ­
+        // ë°©ì–´ ì½”ë“œ: ìŠ¬ë¡¯ ë¦¬ìŠ¤íŠ¸ê°€ ë¹„ì–´ìˆìœ¼ë©´ ë‹¤ì‹œ ì°¾ê¸° ì‹œë„
+        if (Slot.Count == 0) FindSlots();
+
+        // 1. ê¸°ì¡´ ì•„ì´í…œ ì‚­ì œ
         foreach (var slotItems in items)
         {
-            Destroy(slotItems);     //½ÃÀÛÇÒ ¶§ ½½·Ô ¾ÆÀÌÅÛµéÀÇ GameObject »èÁ¦
+            if (slotItems != null) Destroy(slotItems);
         }
-        items.Clear();  //½ÃÀÛÇÒ ¶§ ¾ÆÀÌÅÛ ¸®½ºÆ® Å¬¸®¾î
-        // 2. ³» ÀÎº¥Åä¸® µ¥ÀÌÅÍ¸¦ ÀüÃ¼ Å½»ö
-        int idx = 0;    //Á¢±ÙÇÒ ½½·ÔÀÇ ÀÎµ¦½º
+        items.Clear();
+
+        // 2. ì¸ë²¤í† ë¦¬ ë°ì´í„° íƒìƒ‰
+        int idx = 0;
         foreach (var item in myInven.items)
         {
-            //½½·Ô¾ÆÀÌÅÛ »ı¼º ·ÎÁ÷
+            // ìŠ¬ë¡¯ ê°œìˆ˜ë³´ë‹¤ ì•„ì´í…œì´ ë§ìœ¼ë©´ ì—ëŸ¬ë‚˜ë‹ˆ ì²´í¬
+            if (idx >= Slot.Count) break;
+
+            // ìŠ¬ë¡¯ì´ ì‚´ì•„ìˆëŠ”ì§€ í™•ì¸
+            if (Slot[idx] == null) continue;
+
             var go = Instantiate(SlotItem, Slot[idx].transform);
             go.transform.localPosition = Vector3.zero;
             SlotItemPrefab sItem = go.GetComponent<SlotItemPrefab>();
-            items.Add(go);  //¾ÆÀÌÅÛ ¸®½ºÆ®¿¡ ÇÏ³ª Ãß°¡
+            items.Add(go);
 
-            switch (item.Key)       //°¢ ÄÉÀÌ½ºº°·Î ¾ÆÀÌÅÛ Ãß°¡
+            switch (item.Key)
             {
-                case ItemType.Dirt:
-                    sItem.ItemSetting(dirtSprite, "x" + item.Value.ToString(), item.Key);
-                    break;
-                case ItemType.Grass:
-                    sItem.ItemSetting(grassSprite, "x" + item.Value.ToString(), item.Key);
-                    break;
-                case ItemType.Water:
-                    sItem.ItemSetting(waterSprite, "x" + item.Value.ToString(), item.Key);
-                    break;
-                case ItemType.Iron:
-                    sItem.ItemSetting(ironSprite, "x" + item.Value.ToString(), item.Key);
-                    break;
-                case ItemType.Axe:
-                    sItem.ItemSetting(axeSprite, "x" + item.Value.ToString(), item.Key);
-                    break;
-                case ItemType.Sword:
-                    sItem.ItemSetting(swordSprite, "x" + item.Value.ToString(), item.Key);
-                    break;
-                case ItemType.Pickaxe:
-                    sItem.ItemSetting(pickaxeSprite, "x" + item.Value.ToString(), item.Key);
-                    break;
-                case ItemType.Wood:
-                    sItem.ItemSetting(woodSprite, "x" + item.Value.ToString(), item.Key);
-                    break;
-                case ItemType.Stone:
-                    sItem.ItemSetting(stoneSprite, "x" + item.Value.ToString(), item.Key);
-                    break;
-                case ItemType.LightPiece:
-                    sItem.ItemSetting(lightPieceSprite, "x" + item.Value.ToString(), item.Key);
-                    break;
-                case ItemType.Netherrack:
-                    sItem.ItemSetting(netherrackSprite, "x" + item.Value.ToString(), item.Key);
-                    break;
-                case ItemType.EndStone:
-                    sItem.ItemSetting(endStoneSprite, "x" + item.Value.ToString(), item.Key);
-                    break;
-                case ItemType.StoneAxe:
-                    sItem.ItemSetting(stoneAxeSprite, "x" + item.Value.ToString(), item.Key);
-                    break;
-                case ItemType.StonePickaxe:
-                    sItem.ItemSetting(stonePickaxeSprite, "x" + item.Value.ToString(), item.Key);
-                    break;
-                case ItemType.StoneSword:
-                    sItem.ItemSetting(stoneSwordSprite, "x" + item.Value.ToString(), item.Key);
-                    break;
-                case ItemType.Light:
-                    sItem.ItemSetting(lightSprite, "x" + item.Value.ToString(), item.Key);
-                    break;
+                case ItemType.Dirt: sItem.ItemSetting(dirtSprite, "x" + item.Value.ToString(), item.Key); break;
+                case ItemType.Grass: sItem.ItemSetting(grassSprite, "x" + item.Value.ToString(), item.Key); break;
+                case ItemType.Water: sItem.ItemSetting(waterSprite, "x" + item.Value.ToString(), item.Key); break;
+                case ItemType.Iron: sItem.ItemSetting(ironSprite, "x" + item.Value.ToString(), item.Key); break;
+                case ItemType.Axe: sItem.ItemSetting(axeSprite, "x" + item.Value.ToString(), item.Key); break;
+                case ItemType.Sword: sItem.ItemSetting(swordSprite, "x" + item.Value.ToString(), item.Key); break;
+                case ItemType.Pickaxe: sItem.ItemSetting(pickaxeSprite, "x" + item.Value.ToString(), item.Key); break;
+                case ItemType.Wood: sItem.ItemSetting(woodSprite, "x" + item.Value.ToString(), item.Key); break;
+                case ItemType.Stone: sItem.ItemSetting(stoneSprite, "x" + item.Value.ToString(), item.Key); break;
+                case ItemType.LightPiece: sItem.ItemSetting(lightPieceSprite, "x" + item.Value.ToString(), item.Key); break;
+                case ItemType.Netherrack: sItem.ItemSetting(netherrackSprite, "x" + item.Value.ToString(), item.Key); break;
+                case ItemType.EndStone: sItem.ItemSetting(endStoneSprite, "x" + item.Value.ToString(), item.Key); break;
+                case ItemType.StoneAxe: sItem.ItemSetting(stoneAxeSprite, "x" + item.Value.ToString(), item.Key); break;
+                case ItemType.StonePickaxe: sItem.ItemSetting(stonePickaxeSprite, "x" + item.Value.ToString(), item.Key); break;
+                case ItemType.StoneSword: sItem.ItemSetting(stoneSwordSprite, "x" + item.Value.ToString(), item.Key); break;
+                case ItemType.Light: sItem.ItemSetting(lightSprite, "x" + item.Value.ToString(), item.Key); break;
             }
-            idx++;    //ÀÎµ¦½º ÇÑ Ä­ Ãß°¡
+            idx++;
         }
     }
+
     private void Update()
     {
+        // Slot.Count ì²´í¬ ì¶”ê°€
         for (int i = 0; i < Mathf.Min(9, Slot.Count); i++)
         {
             if (Input.GetKeyDown(KeyCode.Alpha1 + i))
@@ -113,18 +139,19 @@ public class InventoryUI : MonoBehaviour
             }
         }
     }
+
     public void SetSelectedIndex(int idx)
     {
         ResetSelection();
         if (selectedIndex == idx)
         {
-            selectedIndex = -1; // °°Àº ÀÎµ¦½º ¼±ÅÃ ½Ã ¼±ÅÃ ÇØÁ¦
+            selectedIndex = -1;
         }
         else
         {
             if (idx >= items.Count)
             {
-                selectedIndex = -1; // ¾ÆÀÌÅÛÀÌ ¾ø´Â ½½·Ô ¼±ÅÃ ½Ã ¼±ÅÃ ÇØÁ¦
+                selectedIndex = -1;
             }
             else
             {
@@ -136,22 +163,34 @@ public class InventoryUI : MonoBehaviour
 
     public void ResetSelection()
     {
+        // âœ… [ìˆ˜ì •] ë°©ì–´ ì½”ë“œ ì¶”ê°€ (ì˜¤ë¥˜ í•´ê²°ì˜ í•µì‹¬)
+        if (Slot == null) return;
+
         foreach (var slot in Slot)
         {
-            slot.GetComponent<Image>().color = Color.white;
+            // ìŠ¬ë¡¯ì´ ì‚´ì•„ìˆëŠ”ì§€ í™•ì¸
+            if (slot != null)
+            {
+                var img = slot.GetComponent<Image>();
+                if (img != null) img.color = Color.white;
+            }
         }
     }
+
     void SetSelection(int _idx)
     {
-        Slot[_idx].GetComponent<Image>().color = Color.yellow;
+        // âœ… [ìˆ˜ì •] ì¸ë±ìŠ¤ ë²”ìœ„ ë° null ì²´í¬
+        if (Slot != null && _idx >= 0 && _idx < Slot.Count && Slot[_idx] != null)
+        {
+            var img = Slot[_idx].GetComponent<Image>();
+            if (img != null) img.color = Color.yellow;
+        }
     }
+
     public ItemType GetInventorySlot()
     {
-        return items[selectedIndex].GetComponent<SlotItemPrefab>().blockType;
+        if (selectedIndex >= 0 && selectedIndex < items.Count && items[selectedIndex] != null)
+            return items[selectedIndex].GetComponent<SlotItemPrefab>().blockType;
+        return ItemType.Dirt; // ê¸°ë³¸ê°’ ë°˜í™˜ (ì•ˆì „ì¥ì¹˜)
     }
-
-
-
-
-
 }

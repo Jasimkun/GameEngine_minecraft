@@ -75,7 +75,7 @@ public class Inventory : MonoBehaviour
             if (Consume(ItemType.LightPiece, 3))
             {
                 // 2. 완성된 빛 추가
-                Add(ItemType.LightPiece, 1);
+                Add(ItemType.Light, 1);
 
                 // 3. 화면 중앙 메시지 출력
                 ShowNotice("빛 조각이 하나로 합쳐졌습니다!");

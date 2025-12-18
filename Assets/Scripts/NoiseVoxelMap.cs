@@ -63,6 +63,14 @@ public class NoiseVoxelMap : MonoBehaviour
 
     private Dictionary<Vector2Int, int> topBlockHeight = new Dictionary<Vector2Int, int>();
 
+    public static NoiseVoxelMap Instance;
+
+    private void Awake() // Start 대신 Awake 권장
+    {
+        // 씬이 시작되자마자 "내가 대장이다"라고 등록
+        Instance = this;
+    }
+
     void Start()
     {
         if (!isSessionInitialized)

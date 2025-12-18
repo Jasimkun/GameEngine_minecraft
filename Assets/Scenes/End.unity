@@ -435,7 +435,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 42709fe1002f3c2428245d20ebb14e88, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mapID: 0
+  mapID: 2
   resetMapData: 0
   offsetX: 0
   offsetZ: 0
